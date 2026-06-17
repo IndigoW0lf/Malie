@@ -46,11 +46,45 @@ body {
   display: flex;
   flex-direction: column;
   height: 100dvh;
-  max-width: 980px;
+  max-width: 560px; /* phone-first column; centered on wider screens */
   margin: 0 auto;
-  background: radial-gradient(120% 80% at 50% 0%, #fbe8bd 0%, var(--bg) 70%);
+  background: var(--bg);
   position: relative;
   overflow: hidden;
+  isolation: isolate; /* own stacking context so .m-bg sits cleanly behind UI */
+}
+
+/* ─── full-bleed scene background ──────────────────────────────────────────────
+   The whole screen IS the art. The image is set inline from game state (panel +
+   variant) in MalieApp, cascading variant → default → gradient. Art drops into
+   public/scenes/<panel>/<variant>.png and appears automatically.
+   Design target: 1080×1920 (9:16), cover-fit, focal detail centered. */
+.m-bg,
+.m-bg-stars {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+.m-bg {
+  z-index: 0;
+}
+/* Constellation overlay — drawn just above the background, below all UI. The
+   art should be transparent PNG (stars on transparency) so the sky shows through. */
+.m-bg-stars {
+  z-index: 0;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  mix-blend-mode: screen; /* lets star highlights glow over the dark sky */
+}
+
+/* Everything that isn't the background floats above it. */
+.m-statusbar,
+.m-main,
+.m-tabs,
+.m-actionrow {
+  position: relative;
+  z-index: 1;
 }
 
 .m-loading {
@@ -77,7 +111,11 @@ body {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 18px;
-  background: var(--panel);
+  /* Honor the device notch / host chrome at the top of the screen. */
+  padding-top: max(12px, env(safe-area-inset-top));
+  background: rgba(255, 242, 200, 0.82);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   border-bottom: 2px solid rgba(154, 107, 53, 0.35);
   box-shadow: var(--shadow-soft);
   flex-wrap: wrap;
@@ -144,75 +182,72 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
+  justify-content: space-between; /* scene text up top, log at the bottom, art between */
   gap: 12px;
   padding: 16px;
   overflow-y: auto;
   min-height: 0;
 }
 
-.m-scene {
-  background: var(--panel);
+/* Outdoor scene: a translucent text card floating over the full-bleed art. */
+.m-scene-outdoor {
+  align-self: stretch;
+}
+.m-scene-text {
+  background: rgba(255, 248, 224, 0.86);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border: 2px solid rgba(154, 107, 53, 0.3);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 0;
-  overflow: hidden;
-}
-
-.m-scene-art {
-  height: 168px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(160deg, var(--sky), var(--panel-deep));
-}
-.m-scene-lewa_wao .m-scene-art {
-  background: linear-gradient(160deg, #3a567e, #7fb7c9 70%, #f2cf8c);
-}
-.m-scene-kula_kahawai .m-scene-art {
-  background: linear-gradient(160deg, var(--green), #cfe0a0 90%);
-}
-.m-scene-kahakai_moana .m-scene-art {
-  background: linear-gradient(160deg, var(--deep-ocean), var(--ocean) 60%, #e7d6a8);
-}
-.m-scene-glyph {
-  font-size: 4.5rem;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.25));
-}
-
-.m-scene-text {
-  padding: 16px 20px 20px;
+  padding: 14px 18px 16px;
 }
 .m-scene-title {
   margin: 0;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.m-scene-glyph {
   font-size: 1.5rem;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3));
 }
 .m-scene-sub {
-  margin: 2px 0 10px;
+  margin: 2px 0 8px;
   color: var(--muted);
   font-style: italic;
 }
 .m-scene-desc {
-  margin: 0 0 12px;
-  line-height: 1.55;
+  margin: 0 0 10px;
+  line-height: 1.5;
 }
 .m-scene-sign {
   margin: 0;
-  padding: 10px 14px;
-  background: rgba(242, 180, 92, 0.22);
+  padding: 9px 12px;
+  background: rgba(242, 180, 92, 0.3);
   border-left: 3px solid var(--sun);
   border-radius: var(--radius-sm);
-  line-height: 1.5;
+  line-height: 1.45;
+  font-size: 0.92rem;
+}
+
+/* Hale: its interior art is the background; the view floats fully over it. */
+.m-scene-hale {
+  align-self: stretch;
 }
 
 /* ─── message log ──────────────────────────────────────────────────────────── */
 
 .m-log {
-  background: rgba(255, 242, 200, 0.6);
-  border: 1.5px dashed rgba(154, 107, 53, 0.4);
+  background: rgba(255, 242, 200, 0.82);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(154, 107, 53, 0.3);
   border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-soft);
   padding: 10px 14px;
-  max-height: 150px;
+  max-height: 132px;
   overflow-y: auto;
 }
 .m-log-line {
@@ -281,7 +316,11 @@ body {
   justify-content: space-between;
   gap: 10px;
   padding: 14px 16px 18px;
-  background: var(--panel);
+  /* Honor the home-bar / host chrome at the bottom of the screen. */
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+  background: rgba(255, 242, 200, 0.9);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border-top: 2px solid rgba(154, 107, 53, 0.35);
 }
 .m-actions,
@@ -351,14 +390,21 @@ body {
 /* ─── hale ─────────────────────────────────────────────────────────────────── */
 
 .m-hale {
-  padding: 18px 20px 22px;
+  padding: 4px 0 8px;
 }
 .m-hale-greeting {
   margin: 0 0 16px;
-  font-size: 1.15rem;
+  font-size: 1.12rem;
   font-style: italic;
   line-height: 1.5;
   color: var(--ink);
+  background: rgba(255, 248, 224, 0.86);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(154, 107, 53, 0.3);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 18px;
 }
 .m-hale-grid {
   display: grid;
@@ -402,7 +448,14 @@ body {
 }
 
 .m-hale-crafted {
-  margin-top: 18px;
+  margin-top: 14px;
+  background: rgba(255, 248, 224, 0.82);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(154, 107, 53, 0.3);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 16px 16px;
 }
 .m-hale-crafted h3 {
   margin: 0 0 8px;

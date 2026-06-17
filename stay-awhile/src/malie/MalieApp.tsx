@@ -18,6 +18,12 @@ import { PanelTabs } from './components/PanelTabs';
 import { ActionRow } from './components/ActionRow';
 import { InventoryDrawer } from './components/InventoryDrawer';
 import { CraftingPanel } from './components/CraftingPanel';
+import {
+  sceneVariantForState,
+  sceneBackground,
+  constellationImage,
+  showsConstellations,
+} from './data/scenes';
 
 export default function MalieApp() {
   const { state, dispatch, ready } = useGame();
@@ -25,6 +31,10 @@ export default function MalieApp() {
   const [craftOpen, setCraftOpen] = useState(false);
 
   const inventoryCount = Object.values(state.inventory).reduce((n, c) => n + (c ?? 0), 0);
+
+  const variant = sceneVariantForState(state);
+  const sceneBg = sceneBackground(state.activePanel, variant);
+  const showStars = showsConstellations(state.activePanel, variant);
 
   if (!ready) {
     return (
@@ -37,6 +47,21 @@ export default function MalieApp() {
 
   return (
     <div className="m-root">
+      {/* Full-bleed per-scene background. Variant (time-of-day / weather) is
+          chosen from the day's sign; art cascades variant → default → gradient.
+          See src/malie/data/scenes.ts. */}
+      <div className="m-bg" style={{ backgroundImage: sceneBg }} aria-hidden />
+
+      {/* Constellation overlay — only on the sky/forest scene's dark variants.
+          Transparent (shows nothing) until public/scenes/lewa_wao/stars/<season>.png exists. */}
+      {showStars && (
+        <div
+          className="m-bg-stars"
+          style={{ backgroundImage: `url('${constellationImage(state.season)}')` }}
+          aria-hidden
+        />
+      )}
+
       <TopStatusBar
         state={state}
         inventoryCount={inventoryCount}

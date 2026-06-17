@@ -14,7 +14,8 @@
       "Bash(curl -fsSL https://github.com/series-ai/rundot-cli-releases/releases/latest/download/install.sh)",
       "Bash(bash)",
       "Bash(npm run *)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/scenes/README.md)"
     ]
   }
 }
