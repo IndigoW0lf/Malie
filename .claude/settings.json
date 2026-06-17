@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npm view *)",
+      "Bash(npm search *)",
+      "WebSearch",
+      "WebFetch(domain:run.game)",
+      "WebFetch(domain:unpkg.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(npm install *)",
+      "Bash(vf --version)",
+      "Bash(vf --help)",
+      "Bash(curl -fsSL https://github.com/series-ai/rundot-cli-releases/releases/latest/download/install.sh)",
+      "Bash(bash)"
+    ]
+  }
+}
