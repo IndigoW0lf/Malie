@@ -40,6 +40,6 @@ export const GUIDANCE_BY_ID: Record<string, Guidance> = GUIDANCE_SIGNS.reduce(
 
 /** The sign in effect on a given day (1-indexed days, deterministic). */
 export function guidanceForDay(day: number): Guidance {
-  const idx = (day - 1) % GUIDANCE_SIGNS.length;
-  return GUIDANCE_SIGNS[(idx + GUIDANCE_SIGNS.length) % GUIDANCE_SIGNS.length];
+  const idx = (((day - 1) % GUIDANCE_SIGNS.length) + GUIDANCE_SIGNS.length) % GUIDANCE_SIGNS.length;
+  return GUIDANCE_SIGNS[idx]!;
 }

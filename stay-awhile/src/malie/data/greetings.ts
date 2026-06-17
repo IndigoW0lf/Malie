@@ -18,8 +18,8 @@ export const GREETINGS: string[] = [
 
 /** Deterministic greeting for a day. */
 export function greetingForDay(day: number): string {
-  const idx = (day - 1) % GREETINGS.length;
-  return GREETINGS[(idx + GREETINGS.length) % GREETINGS.length];
+  const idx = (((day - 1) % GREETINGS.length) + GREETINGS.length) % GREETINGS.length;
+  return GREETINGS[idx]!;
 }
 
 /**

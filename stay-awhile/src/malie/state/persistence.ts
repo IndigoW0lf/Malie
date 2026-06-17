@@ -57,7 +57,7 @@ function saveLocal(state: GameState): void {
 export async function loadGame(): Promise<GameState | null> {
   try {
     const envelope = await loadSave();
-    const fromCloud = asGameState(envelope.data?.malie);
+    const fromCloud = asGameState(envelope.data?.['malie']);
     if (fromCloud) return fromCloud;
   } catch {
     /* fall through to local */

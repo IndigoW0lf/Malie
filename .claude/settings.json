@@ -12,7 +12,9 @@
       "Bash(vf --version)",
       "Bash(vf --help)",
       "Bash(curl -fsSL https://github.com/series-ai/rundot-cli-releases/releases/latest/download/install.sh)",
-      "Bash(bash)"
+      "Bash(bash)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)"
     ]
   }
 }

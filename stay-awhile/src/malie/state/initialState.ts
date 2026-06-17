@@ -14,14 +14,15 @@ export const SEASON_LENGTH = 7;
 
 /** Deterministic tide for a given day. */
 export function tideForDay(day: number): Tide {
-  const idx = (day - 1) % TIDE_CYCLE.length;
-  return TIDE_CYCLE[(idx + TIDE_CYCLE.length) % TIDE_CYCLE.length];
+  const idx = (((day - 1) % TIDE_CYCLE.length) + TIDE_CYCLE.length) % TIDE_CYCLE.length;
+  return TIDE_CYCLE[idx]!;
 }
 
 /** Deterministic season for a given day. */
 export function seasonForDay(day: number): Season {
-  const idx = Math.floor((day - 1) / SEASON_LENGTH) % SEASON_CYCLE.length;
-  return SEASON_CYCLE[(idx + SEASON_CYCLE.length) % SEASON_CYCLE.length];
+  const raw = Math.floor((day - 1) / SEASON_LENGTH) % SEASON_CYCLE.length;
+  const idx = ((raw % SEASON_CYCLE.length) + SEASON_CYCLE.length) % SEASON_CYCLE.length;
+  return SEASON_CYCLE[idx]!;
 }
 
 export function createInitialState(): GameState {
