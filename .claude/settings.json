@@ -15,7 +15,17 @@
       "Bash(bash)",
       "Bash(npm run *)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/scenes/README.md)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/scenes/README.md)",
+      "Bash(mv hale.png default.png)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:5173/scenes/hale/default.png\")",
+      "Bash(mkdir -p reference)",
+      "Bash(mv public/scenes/hale/Malie8.png reference/Malie8.png)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:5173/scenes/hale/Malie8.png\")",
+      "Bash(curl -s -I \"http://localhost:5173/scenes/hale/Malie8.png\")",
+      "Bash(curl -s -I \"http://localhost:5173/scenes/hale/default.png\")",
+      "Bash(python3 -c \"from PIL import Image; im=Image.open\\('reference/Malie8.png'\\); print\\('size:', im.size, 'mode:', im.mode\\)\")",
+      "Bash(python3 -m pip install --quiet Pillow)",
+      "Bash(python3 -)"
     ]
   }
 }

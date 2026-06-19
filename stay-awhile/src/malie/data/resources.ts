@@ -23,6 +23,16 @@ export const RESOURCES: Record<ResourceId, Resource> = {
   limu: { id: 'limu', name: 'Limu', glyph: '🌾', note: 'Seaweed from the shallows.' },
   driftwood: { id: 'driftwood', name: 'Driftwood', glyph: '🪵', note: 'Carried in by the sea.' },
   tide_pool_gift: { id: 'tide_pool_gift', name: 'Tide-Pool Gift', glyph: '💠', note: 'Something shining, left behind.' },
+
+  // gathered additions
+  kukui: { id: 'kukui', name: 'Kukui Nut', glyph: '🌰', note: 'Oily nut, good for light.' },
+  wauke: { id: 'wauke', name: 'Wauke Bark', glyph: '🟫', note: 'Bark strips for kapa.' },
+  lauhala: { id: 'lauhala', name: 'Lauhala', glyph: '🍃', note: 'Pandanus leaves for weaving.' },
+  coral: { id: 'coral', name: 'Coral', glyph: '🪸', note: 'A piece worn smooth by the sea.' },
+
+  // prepared materials
+  cordage: { id: 'cordage', name: 'Cordage', glyph: '🧶', note: 'Twisted fiber, ready to bind.' },
+  kapa_cloth: { id: 'kapa_cloth', name: 'Kapa Cloth', glyph: '🧻', note: 'Beaten bark cloth.' },
 };
 
 /** Display helper. */

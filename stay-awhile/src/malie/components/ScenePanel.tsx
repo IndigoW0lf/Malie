@@ -17,15 +17,18 @@ import { HaleView } from './HaleView';
 interface Props {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
+  onBeginPlacement: (craftedItemId: string) => void;
+  /** Hides the hale chrome (greeting + tray) while calibrating. */
+  hideHaleChrome?: boolean;
 }
 
-export function ScenePanel({ state, dispatch }: Props) {
+export function ScenePanel({ state, onBeginPlacement, hideHaleChrome }: Props) {
   const panel = PANELS_BY_ID[state.activePanel];
 
   if (state.activePanel === 'hale') {
     return (
       <section className="m-scene m-scene-hale">
-        <HaleView state={state} dispatch={dispatch} />
+        <HaleView state={state} onBeginPlacement={onBeginPlacement} hidden={hideHaleChrome} />
       </section>
     );
   }

@@ -42,16 +42,46 @@ body {
 
 /* ─── root layout ──────────────────────────────────────────────────────────── */
 
+/* The stage fills the whole window; the portrait game sits centered inside it,
+   with the scene art blurred behind as an ambient surround on wide screens. */
+.m-stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #241a12;
+  overflow: hidden;
+}
+.m-stage-amb {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: blur(44px) brightness(0.45) saturate(1.1);
+  transform: scale(1.2); /* hide blurred edges */
+  z-index: 0;
+}
+
 .m-root {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
-  max-width: 560px; /* phone-first column; centered on wider screens */
-  margin: 0 auto;
-  background: var(--bg);
   position: relative;
+  z-index: 1;
+  /* Fill the viewport height; width follows a portrait ratio, so the stage
+     grows with the screen instead of being capped at a fixed pixel column. */
+  height: 100dvh;
+  width: min(100vw, calc(100dvh * 0.62));
+  background: var(--bg);
   overflow: hidden;
   isolation: isolate; /* own stacking context so .m-bg sits cleanly behind UI */
+}
+/* On wider screens there's margin around the stage — frame it like a device. */
+@media (min-width: 640px) {
+  .m-root {
+    border-radius: 18px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
+  }
 }
 
 /* ─── full-bleed scene background ──────────────────────────────────────────────
@@ -81,8 +111,8 @@ body {
 /* Everything that isn't the background floats above it. */
 .m-statusbar,
 .m-main,
-.m-tabs,
-.m-actionrow {
+.m-sheet,
+.m-bottombar {
   position: relative;
   z-index: 1;
 }
@@ -232,9 +262,13 @@ body {
   font-size: 0.92rem;
 }
 
-/* Hale: its interior art is the background; the view floats fully over it. */
+/* Hale: its interior art is the background; the view floats fully over it.
+   Stretch to fill so greeting pins to the top and the tray drops to the bottom,
+   leaving the central background clear for placed items. */
 .m-scene-hale {
+  flex: 1;
   align-self: stretch;
+  display: flex;
 }
 
 /* ─── message log ──────────────────────────────────────────────────────────── */
@@ -390,6 +424,9 @@ body {
 /* ─── hale ─────────────────────────────────────────────────────────────────── */
 
 .m-hale {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   padding: 4px 0 8px;
 }
 .m-hale-greeting {
@@ -406,90 +443,186 @@ body {
   box-shadow: var(--shadow);
   padding: 14px 18px;
 }
-.m-hale-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  padding: 14px;
-  background: linear-gradient(160deg, #e9c98a, var(--panel-deep));
-  border: 2px solid rgba(154, 107, 53, 0.4);
-  border-radius: var(--radius);
-  box-shadow: inset 0 2px 12px rgba(61, 42, 22, 0.18);
+/* Placed-item layer: spans the screen over the hale background, display-only. */
+.m-placed-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
 }
-.m-slot {
-  aspect-ratio: 1;
+.m-placed {
+  position: absolute;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  border-radius: var(--radius-sm);
-  border: 1.5px dashed rgba(61, 42, 22, 0.3);
-  background: rgba(255, 242, 200, 0.4);
-  color: rgba(61, 42, 22, 0.4);
 }
-.m-slot-filled {
-  border-style: solid;
-  border-color: var(--border);
-  background: var(--panel);
-  color: var(--ink);
-  box-shadow: var(--shadow-soft);
+.m-placed-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 3px 6px rgba(61, 42, 22, 0.35));
 }
-.m-slot-glyph {
-  font-size: 1.7rem;
-}
-.m-slot-name {
-  font-size: 0.62rem;
-  text-align: center;
-  line-height: 1.05;
-}
-.m-slot-empty {
-  font-size: 1.4rem;
+.m-placed-fallback {
+  font-size: 2.2rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(61, 42, 22, 0.4));
 }
 
-.m-hale-crafted {
-  margin-top: 14px;
-  background: rgba(255, 248, 224, 0.82);
+/* The "to place" tray, pinned to the bottom of the hale. */
+.m-hale-tray {
+  margin-top: auto;
+  background: rgba(255, 248, 224, 0.86);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border: 2px solid rgba(154, 107, 53, 0.3);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 14px 16px 16px;
+  padding: 12px 14px 14px;
 }
-.m-hale-crafted h3 {
+.m-hale-tray h3 {
   margin: 0 0 8px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
-.m-crafted-list {
+.m-tray-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 8px;
 }
-.m-crafted-item {
+.m-tray-chip {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 8px 12px;
   background: var(--panel);
-  border: 1.5px solid rgba(154, 107, 53, 0.3);
-  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--green);
+  border-radius: 999px;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.12s ease, filter 0.12s ease;
 }
-.m-crafted-glyph {
-  font-size: 1.4rem;
+.m-tray-chip:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
 }
-.m-crafted-name {
-  flex: 1;
+.m-tray-glyph {
+  font-size: 1.3rem;
+}
+.m-tray-name {
   font-weight: 600;
 }
+.m-tray-place {
+  font-size: 0.78rem;
+  color: var(--green);
+  font-weight: 700;
+}
+.m-hale-tools {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-style: italic;
+}
 
-.m-place-btn,
+/* ─── placement mode ───────────────────────────────────────────────────────── */
+
+.m-place-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  background: rgba(61, 42, 22, 0.28);
+}
+.m-place-banner {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 92%;
+  padding: 10px 16px;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  font-size: 0.92rem;
+}
+.m-place-cancel {
+  border: 1.5px solid var(--border);
+  background: var(--panel-deep);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.m-place-none {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  max-width: 70%;
+  padding: 12px 16px;
+  background: var(--panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-style: italic;
+  color: var(--muted);
+}
+
+/* A glowing tap target at a valid, empty slot. */
+.m-place-target {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+.m-place-target-dot {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: rgba(242, 209, 140, 0.55);
+  border: 2.5px solid var(--sun);
+  box-shadow: 0 0 0 0 rgba(242, 180, 92, 0.7);
+  animation: m-pulse 1.6s ease-out infinite;
+}
+.m-place-target:hover .m-place-target-dot {
+  background: rgba(242, 209, 140, 0.9);
+}
+.m-place-target-label {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #f4ecd8;
+  background: rgba(61, 42, 22, 0.7);
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+@keyframes m-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(242, 180, 92, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(242, 180, 92, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(242, 180, 92, 0);
+  }
+}
+
 .m-craft-btn {
   border: 1.5px solid var(--green);
   background: var(--green);
@@ -501,11 +634,9 @@ body {
   cursor: pointer;
   transition: filter 0.12s ease;
 }
-.m-place-btn:hover:not(:disabled),
 .m-craft-btn:hover:not(:disabled) {
   filter: brightness(1.08);
 }
-.m-place-btn:disabled,
 .m-craft-btn:disabled {
   background: rgba(114, 91, 58, 0.25);
   border-color: rgba(114, 91, 58, 0.3);
@@ -623,6 +754,9 @@ body {
   padding: 12px 14px;
   background: rgba(255, 248, 224, 0.7);
 }
+.m-recipe-owned {
+  opacity: 0.62;
+}
 .m-recipe-head {
   display: flex;
   align-items: center;
@@ -682,6 +816,343 @@ body {
   width: 100%;
 }
 
+/* ─── scene navigation arrows ──────────────────────────────────────────────── */
+
+.m-scenenav {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.m-scene-arrow {
+  position: absolute;
+  top: 42%;
+  transform: translateY(-50%);
+  pointer-events: auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: rgba(255, 248, 224, 0.78);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: var(--ink);
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  transition: filter 0.12s ease, transform 0.12s ease;
+}
+.m-scene-arrow:hover {
+  filter: brightness(1.06);
+}
+.m-scene-arrow-prev {
+  left: 8px;
+}
+.m-scene-arrow-next {
+  right: 8px;
+}
+
+/* ─── compact bottom bar ───────────────────────────────────────────────────── */
+
+.m-bottombar {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 12px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  background: rgba(255, 242, 200, 0.92);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-top: 2px solid rgba(154, 107, 53, 0.35);
+}
+.m-bb-btn {
+  flex: 1;
+  border: 1.5px solid var(--border);
+  background: var(--panel-deep);
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 10px 8px;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: filter 0.12s ease;
+}
+.m-bb-btn:hover {
+  filter: brightness(1.05);
+}
+.m-bb-active {
+  background: var(--sun);
+  box-shadow: inset 0 2px 6px rgba(61, 42, 22, 0.18);
+}
+.m-bb-caret {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+.m-bb-rest {
+  flex: 1.3;
+  background: var(--deep-green);
+  color: #f4ecd8;
+  border-color: var(--deep-green);
+}
+
+/* ─── expanding bottom trays (Gather / Craft) ──────────────────────────────── */
+
+.m-sheet {
+  background: rgba(255, 248, 224, 0.95);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-top: 2px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+  box-shadow: 0 -8px 24px rgba(61, 42, 22, 0.18);
+  padding: 12px 16px 14px;
+  max-height: 46dvh;
+  overflow-y: auto;
+  animation: m-slideup 0.18s ease;
+}
+@keyframes m-slideup {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.m-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.m-sheet-head h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.m-sheet-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-style: italic;
+  font-size: 0.86rem;
+}
+
+/* compact gather rows */
+.m-gather-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.m-gather-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  padding: 9px 12px;
+  border: 1.5px solid rgba(154, 107, 53, 0.3);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  font: inherit;
+  cursor: pointer;
+  transition: filter 0.12s ease, transform 0.12s ease;
+}
+.m-gather-row:hover:not(:disabled) {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+.m-gather-used {
+  opacity: 0.55;
+  cursor: default;
+}
+.m-gather-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.m-gather-label {
+  font-weight: 600;
+}
+.m-gather-desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.m-gather-state {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--green);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.m-gather-used .m-gather-state {
+  color: var(--muted);
+}
+
+/* ─── hale calibration (dev tool) ──────────────────────────────────────────── */
+
+.m-cal-toggle {
+  position: absolute;
+  left: 12px;
+  bottom: calc(64px + env(safe-area-inset-bottom));
+  z-index: 55;
+  border: 1.5px solid var(--border);
+  background: rgba(255, 242, 200, 0.92);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+}
+.m-cal {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  touch-action: none;
+}
+.m-cal-slot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  border: 2px dashed rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  background: rgba(35, 108, 143, 0.28);
+  cursor: grab;
+}
+.m-cal-slot:active {
+  cursor: grabbing;
+}
+.m-cal-sel {
+  border-style: solid;
+  border-color: var(--sun);
+  background: rgba(242, 180, 92, 0.4);
+  box-shadow: 0 0 0 2px rgba(242, 180, 92, 0.5);
+}
+.m-cal-floor {
+  border-color: #8fe0a0;
+}
+.m-cal-shelf {
+  border-color: #9fd0ff;
+}
+.m-cal-cubby {
+  border-color: #ffd98f;
+}
+.m-cal-wall {
+  border-color: #ff9f9f;
+}
+.m-cal-hanging {
+  border-color: #d9a8ff;
+}
+.m-cal-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(61, 42, 22, 0.8);
+  padding: 1px 5px;
+  border-radius: 0 0 6px 6px;
+  white-space: nowrap;
+  transform: translateY(-100%);
+  pointer-events: none;
+}
+.m-cal-panel {
+  position: absolute;
+  right: 12px;
+  top: calc(72px + env(safe-area-inset-top));
+  width: 220px;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  font-size: 0.84rem;
+}
+.m-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.m-cal-drag {
+  cursor: move;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.m-cal-x {
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--muted);
+}
+.m-cal-hint,
+.m-cal-note {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+.m-cal-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0;
+  padding: 8px;
+  background: rgba(226, 182, 111, 0.25);
+  border-radius: var(--radius-sm);
+}
+.m-cal-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: space-between;
+}
+.m-cal-id {
+  font-weight: 700;
+}
+.m-cal-row button {
+  border: 1.5px solid var(--border);
+  background: var(--panel-deep);
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.m-cal-row select {
+  font: inherit;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  padding: 2px 4px;
+}
+.m-cal-range {
+  width: 100%;
+  margin: 2px 0 4px;
+  accent-color: var(--sun);
+}
+.m-cal-copy {
+  width: 100%;
+  margin-top: 6px;
+  border: 1.5px solid var(--green);
+  background: var(--green);
+  color: #f4ecd8;
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* ─── responsive ───────────────────────────────────────────────────────────── */
 
 @media (max-width: 560px) {
@@ -696,8 +1167,5 @@ body {
   }
   .m-actions-fixed .m-action {
     flex: 1;
-  }
-  .m-hale-grid {
-    grid-template-columns: repeat(3, 1fr);
   }
 }

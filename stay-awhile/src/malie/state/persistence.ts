@@ -28,6 +28,12 @@ function asGameState(data: unknown): GameState | null {
   if (!Array.isArray(g.messageLog)) return null;
   // actionsUsedToday was added alongside the daily-limit rule; tolerate older blobs.
   if (!Array.isArray(g.actionsUsedToday)) g.actionsUsedToday = [];
+  // Placement moved from numeric `slot` to named `slotId`; drop pre-migration
+  // entries that lack a string slotId so they don't render as ghosts.
+  g.placedItems = g.placedItems.filter(
+    (p): p is { craftedItemId: string; slotId: string } =>
+      p != null && typeof (p as { slotId?: unknown }).slotId === 'string',
+  );
   return g as GameState;
 }
 

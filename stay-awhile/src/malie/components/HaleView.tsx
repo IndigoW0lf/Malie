@@ -1,28 +1,25 @@
 /**
- * Mālie — the hale interior. The morning greeting, the floor of placed things,
- * and the crafted items waiting to be set down.
+ * Mālie — the hale chrome. The placed items themselves render on the background
+ * (see PlacedItemLayer); this view is just the morning greeting and the tray of
+ * crafted items waiting to be set down. Tapping one begins placement mode.
  */
-import type { GameAction, GameState } from '../types/game';
+import type { CraftedItem, GameState } from '../types/game';
 import { recipeGlyph } from '../data/recipes';
-import { PlacedItemGrid } from './PlacedItemGrid';
-
-export const HALE_SLOTS = 12;
+import { isPlaceable } from '../data/craftables';
 
 interface Props {
   state: GameState;
-  dispatch: React.Dispatch<GameAction>;
+  onBeginPlacement: (craftedItemId: string) => void;
+  /** Hidden while the calibration tool is open so the full hale art shows. */
+  hidden?: boolean;
 }
 
-export function HaleView({ state, dispatch }: Props) {
-  const craftedById = new Map(state.craftedItems.map((c) => [c.id, c]));
-  const unplaced = state.craftedItems.filter((c) => !c.placed);
-  const usedSlots = new Set(state.placedItems.map((p) => p.slot));
+export function HaleView({ state, onBeginPlacement, hidden }: Props) {
+  // Keep the stretchy spacer so layout doesn't jump, but show no chrome.
+  if (hidden) return <div className="m-hale" />;
 
-  // The next open slot on the floor, or null when the hale is full.
-  const nextSlot = (() => {
-    for (let i = 0; i < HALE_SLOTS; i++) if (!usedSlots.has(i)) return i;
-    return null;
-  })();
+  const unplaced = state.craftedItems.filter((c) => !c.placed && isPlaceable(c.recipeId));
+  const tools = state.craftedItems.filter((c) => !isPlaceable(c.recipeId));
 
   // The most recent dawn greeting is the freshest message in the log.
   const greeting = state.messageLog[0] ?? '';
@@ -31,31 +28,29 @@ export function HaleView({ state, dispatch }: Props) {
     <div className="m-hale">
       <p className="m-hale-greeting">{greeting}</p>
 
-      <PlacedItemGrid slots={HALE_SLOTS} placedItems={state.placedItems} craftedById={craftedById} />
-
-      <div className="m-hale-crafted">
-        <h3>Crafted, waiting to be placed</h3>
+      <div className="m-hale-tray">
+        <h3>To place</h3>
         {unplaced.length === 0 ? (
-          <p className="m-empty">Nothing yet. Gather a little, then make something at Craft.</p>
+          <p className="m-empty">Nothing waiting. Gather a little, then make something at Craft.</p>
         ) : (
-          <ul className="m-crafted-list">
-            {unplaced.map((c) => (
-              <li key={c.id} className="m-crafted-item">
-                <span className="m-crafted-glyph">{recipeGlyph(c.recipeId)}</span>
-                <span className="m-crafted-name">{c.name}</span>
-                <button
-                  className="m-place-btn"
-                  disabled={nextSlot === null}
-                  onClick={() =>
-                    nextSlot !== null &&
-                    dispatch({ type: 'PLACE_ITEM', craftedItemId: c.id, slot: nextSlot })
-                  }
-                >
-                  {nextSlot === null ? 'Hale is full' : 'Place in Hale'}
+          <ul className="m-tray-list">
+            {unplaced.map((c: CraftedItem) => (
+              <li key={c.id}>
+                <button className="m-tray-chip" onClick={() => onBeginPlacement(c.id)}>
+                  <span className="m-tray-glyph">{recipeGlyph(c.recipeId)}</span>
+                  <span className="m-tray-name">{c.name}</span>
+                  <span className="m-tray-place">place →</span>
                 </button>
               </li>
             ))}
           </ul>
+        )}
+
+        {tools.length > 0 && (
+          <p className="m-hale-tools">
+            Tools:{' '}
+            {tools.map((t) => `${recipeGlyph(t.recipeId)} ${t.name}`).join('  ·  ')}
+          </p>
         )}
       </div>
     </div>

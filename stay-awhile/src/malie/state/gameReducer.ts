@@ -4,7 +4,9 @@
  */
 import type { CraftedItem, GameAction, GameState, Inventory, ResourceId } from '../types/game';
 import { findAction } from '../data/panels';
-import { findRecipe } from '../data/recipes';
+import { findRecipe, isToolRecipe } from '../data/recipes';
+import { getSlot } from '../data/haleSlots';
+import { allowsSlotType } from '../data/craftables';
 import { guidanceForDay } from '../data/guidance';
 import { resourceName } from '../data/resources';
 import { dawnMessages } from '../data/greetings';
@@ -81,6 +83,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'CRAFT': {
       const recipe = findRecipe(action.recipeId);
       if (!recipe) return state;
+
+      // Tools are made once and kept — crafting an owned tool is a no-op.
+      if (recipe.result.tool && state.craftedItems.some((c) => c.recipeId === recipe.id)) {
+        return state;
+      }
       if (!canAfford(state.inventory, recipe.ingredients)) return state;
 
       // Honor availability windows (tide / season / sign).
@@ -91,6 +98,26 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         if (when.signs && !when.signs.includes(state.guidanceId)) return state;
       }
 
+      // Required tools must be owned.
+      if (recipe.requiresTools) {
+        const owned = new Set(
+          state.craftedItems.filter((c) => isToolRecipe(c.recipeId)).map((c) => c.recipeId),
+        );
+        if (!recipe.requiresTools.every((t) => owned.has(t))) return state;
+      }
+
+      const inventory = removeItems(state.inventory, recipe.ingredients);
+
+      // Material craft: yields resources into the bag, makes no kept item.
+      if (recipe.yields) {
+        return {
+          ...state,
+          inventory: addRewards(inventory, recipe.yields),
+          messageLog: pushLog(state.messageLog, `You prepare ${describeRewards(recipe.yields)}.`),
+        };
+      }
+
+      // Object / tool craft: produce a kept item.
       const item: CraftedItem = {
         id: craftedId(recipe.id, state),
         recipeId: recipe.id,
@@ -98,26 +125,33 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         placed: false,
         createdDay: state.day,
       };
+      const line = recipe.result.tool
+        ? `You make a ${recipe.name}. A tool to keep.`
+        : `You make a ${recipe.name}.`;
 
       return {
         ...state,
-        inventory: removeItems(state.inventory, recipe.ingredients),
+        inventory,
         craftedItems: [...state.craftedItems, item],
-        messageLog: pushLog(state.messageLog, `You make a ${recipe.name}.`),
+        messageLog: pushLog(state.messageLog, line),
       };
     }
 
     case 'PLACE_ITEM': {
       const item = state.craftedItems.find((c) => c.id === action.craftedItemId);
       if (!item || item.placed) return state;
-      if (state.placedItems.some((p) => p.slot === action.slot)) return state; // slot taken
+
+      const slot = getSlot(action.slotId);
+      if (!slot) return state; // unknown slot
+      if (state.placedItems.some((p) => p.slotId === slot.id)) return state; // slot taken
+      if (!allowsSlotType(item.recipeId, slot.type)) return state; // wrong kind of spot
 
       return {
         ...state,
         craftedItems: state.craftedItems.map((c) =>
           c.id === item.id ? { ...c, placed: true } : c,
         ),
-        placedItems: [...state.placedItems, { craftedItemId: item.id, slot: action.slot }],
+        placedItems: [...state.placedItems, { craftedItemId: item.id, slotId: slot.id }],
         messageLog: pushLog(state.messageLog, `You set the ${item.name} in the hale.`),
       };
     }

@@ -76,6 +76,14 @@ export const PANEL_ACTIONS: PanelAction[] = [
     rewards: { feather: 1 },
     conditionalRewards: [{ guidanceId: 'iwa_birds', rewards: { feather: 1 } }],
   },
+  {
+    id: 'gather_kukui',
+    label: 'Gather Kukui',
+    description: 'Collect fallen kukui nuts beneath the trees.',
+    panelId: 'lewa_wao',
+    kind: 'gather',
+    rewards: { kukui: 1, leaf: 1 },
+  },
 
   // ─── Kula / Kahawai ────────────────────────────────────────────────────────
   {
@@ -98,22 +106,22 @@ export const PANEL_ACTIONS: PanelAction[] = [
   },
   {
     id: 'gather_wood',
-    label: 'Gather Wood & Fiber',
-    description: 'Collect fallen wood and strip a little bark fiber.',
+    label: 'Gather Wood & Bark',
+    description: 'Collect fallen wood, a gourd, and strip wauke bark.',
     panelId: 'kula_kahawai',
     kind: 'gather',
-    rewards: { wood: 1, bark_fiber: 1, gourd: 1 },
+    rewards: { wood: 1, gourd: 1, wauke: 1 },
   },
 
   // ─── Kahakai / Moana ───────────────────────────────────────────────────────
   {
     id: 'watch_tide',
     label: 'Watch the Tide',
-    description: 'Read the movement of the shore.',
+    description: 'Read the shore; gather a shell and a smooth stone.',
     panelId: 'kahakai_moana',
     kind: 'observe',
-    rewards: { shell: 1 },
-    conditionalRewards: [{ tide: 'low', rewards: { tide_pool_gift: 1, limu: 1 } }],
+    rewards: { shell: 1, smooth_stone: 1 },
+    conditionalRewards: [{ tide: 'low', rewards: { tide_pool_gift: 1, limu: 1, coral: 1 } }],
   },
   {
     id: 'fish_gently',
@@ -127,10 +135,10 @@ export const PANEL_ACTIONS: PanelAction[] = [
   {
     id: 'gather_shore',
     label: 'Walk the Shore',
-    description: 'Gather what the sea has set down: a shell, driftwood, limu.',
+    description: 'Gather what the sea sets down: shell, driftwood, limu, lauhala.',
     panelId: 'kahakai_moana',
     kind: 'gather',
-    rewards: { shell: 1, driftwood: 1, limu: 1 },
+    rewards: { shell: 1, driftwood: 1, limu: 1, lauhala: 1 },
   },
 ];
 
@@ -144,4 +152,14 @@ export const ACTIONS_BY_PANEL: Record<PanelId, PanelAction[]> = PANEL_ACTIONS.re
 
 export function findAction(actionId: string): PanelAction | undefined {
   return PANEL_ACTIONS.find((a) => a.id === actionId);
+}
+
+/** Panel order for ‹ › scene navigation. */
+export const PANEL_ORDER: PanelId[] = PANELS.map((p) => p.id);
+
+/** The next/previous panel, wrapping around. */
+export function cyclePanel(current: PanelId, dir: 1 | -1): PanelId {
+  const i = PANEL_ORDER.indexOf(current);
+  const n = (i + dir + PANEL_ORDER.length) % PANEL_ORDER.length;
+  return PANEL_ORDER[n]!;
 }

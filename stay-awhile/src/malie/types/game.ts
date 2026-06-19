@@ -17,7 +17,7 @@ export type Tide = 'low' | 'rising' | 'high' | 'falling';
 /** The four parts of the ahupuaʻa the player moves between. */
 export type PanelId = 'lewa_wao' | 'kula_kahawai' | 'kahakai_moana' | 'hale';
 
-/** Every gatherable resource in the world. */
+/** Every resource in the world — gathered, or prepared as a crafting material. */
 export type ResourceId =
   | 'flower'
   | 'leaf'
@@ -34,7 +34,15 @@ export type ResourceId =
   | 'fish'
   | 'limu'
   | 'driftwood'
-  | 'tide_pool_gift';
+  | 'tide_pool_gift'
+  // gathered additions
+  | 'kukui'
+  | 'wauke'
+  | 'lauhala'
+  | 'coral'
+  // prepared materials (made at Craft, consumed by other recipes)
+  | 'cordage'
+  | 'kapa_cloth';
 
 /** A bag of resources: resource id → count. */
 export type Inventory = Partial<Record<ResourceId, number>>;
@@ -100,6 +108,8 @@ export interface RecipeResult {
   offering?: boolean;
   /** Something the hale remembers in its morning greeting. */
   memory?: boolean;
+  /** A lasting tool. Crafted once, kept, and unlocks other recipes. */
+  tool?: boolean;
 }
 
 /** A light crafting recipe — never more than a few ingredients. */
@@ -115,6 +125,13 @@ export interface Recipe {
     seasons?: Season[];
     signs?: string[];
   };
+  /** Tools (recipe ids) the player must own before this can be crafted. */
+  requiresTools?: string[];
+  /**
+   * If set, crafting yields these resources into the bag instead of producing a
+   * placeable/kept item — for preparing materials like cordage or kapa cloth.
+   */
+  yields?: Inventory;
   result: RecipeResult;
 }
 
@@ -128,10 +145,45 @@ export interface CraftedItem {
   createdDay: number;
 }
 
-/** A crafted item set into a hale slot. */
+/** The kinds of spots in the hale a crafted item can occupy. */
+export type SlotType = 'shelf' | 'cubby' | 'floor' | 'wall' | 'hanging';
+
+/**
+ * A placement spot painted onto the hale background. `x`/`y` are percentages of
+ * the background box (0–100), `scale` sizes the item relative to a base size,
+ * `zIndex` controls front/back overlap, `rotation` (deg) is optional.
+ */
+export interface HaleSlot {
+  id: string;
+  type: SlotType;
+  x: number;
+  y: number;
+  scale: number;
+  zIndex: number;
+  rotation?: number;
+}
+
+/**
+ * Placement metadata for a craftable, keyed by its recipe id. Separate from the
+ * Recipe (which owns cost + availability) so art/placement can evolve freely.
+ */
+export interface Craftable {
+  /** Matches the Recipe id. */
+  id: string;
+  name: string;
+  category: RecipeCategory;
+  /** Which slot types this item is allowed to occupy. */
+  allowedSlots: SlotType[];
+  /** Emoji or icon path shown in lists/trays. */
+  inventoryIcon: string;
+  /** Asset to render per slot type; missing/failed loads fall back to the icon. */
+  assetBySlotType: Partial<Record<SlotType, string>>;
+}
+
+/** A crafted item set into a named hale slot. */
 export interface PlacedItem {
   craftedItemId: string;
-  slot: number;
+  slotId: string;
 }
 
 /** A day's reading of the sky/sea — guidance that colors the day. */
@@ -163,7 +215,7 @@ export type GameAction =
   | { type: 'SET_PANEL'; panelId: PanelId }
   | { type: 'PERFORM_PANEL_ACTION'; actionId: string }
   | { type: 'CRAFT'; recipeId: string }
-  | { type: 'PLACE_ITEM'; craftedItemId: string; slot: number }
+  | { type: 'PLACE_ITEM'; craftedItemId: string; slotId: string }
   | { type: 'END_DAY' }
   | { type: 'RESET_GAME' }
   | { type: 'HYDRATE'; state: GameState };
