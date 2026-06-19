@@ -340,7 +340,9 @@ export const OFFERING_AFFINITY: Record<string, SpiritId[]> = {
   leaf_bundle: ['pueo_aumakua'],
   star_marker: ['pueo_aumakua'],
   kukui_light: ['pueo_aumakua'],
-  flower_shell_offering: ['kanaloa', 'shark_aumakua'],
+  // ʻAwa was the best offering and had a special role in ʻaumakua worship, so it
+  // aligns with the ancestral guardians (the family ʻaumākua), not every akua.
+  awa_offering: ['pueo_aumakua', 'moo_aumakua', 'shark_aumakua'],
   shell_bowl: ['kanaloa', 'shark_aumakua'],
   water_bowl: ['lono', 'kanaloa', 'kane', 'moo_aumakua'],
 };

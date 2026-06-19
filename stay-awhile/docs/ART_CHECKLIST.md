@@ -51,10 +51,16 @@ The "sits on" column is just context for framing — you still only make one spr
 ### Relationship / Offerings
 | Item | `recipeId` | Made from | Sits on |
 | --- | --- | --- | --- |
-| Flower & Shell Offering | `flower_shell_offering` | flower ×1, shell ×1 | shelf, cubby, floor |
+| ʻAwa Offering | `awa_offering` | ʻawa ×2, gourd ×1 | shelf, cubby, floor |
 | Shell Bowl | `shell_bowl` | shell ×2 | shelf, cubby |
 | Water Bowl | `water_bowl` | gourd ×1, coral ×1 | shelf, cubby, floor |
 | Wind Chime | `wind_chime` | shell ×3, cordage ×1 | hanging, wall |
+
+> **`awa_offering` art note:** a small, plain dried-gourd cup/shallow bowl holding
+> opaque earthy tan-brown ʻawa. Slightly handmade, uneven rim; maybe a modest
+> twisted-fiber loop. **No** flowers, soil, shell scatter, pedestal, or garnish —
+> humble and deliberate, prepared to feed and honor an ʻaumakua. One object,
+> transparent background.
 
 ### Guidance
 | Item | `recipeId` | Made from | Sits on |

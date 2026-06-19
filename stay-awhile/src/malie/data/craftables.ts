@@ -30,8 +30,8 @@ interface CraftableSeed {
 const SEEDS: CraftableSeed[] = [
   { id: 'woven_mat', name: 'Woven Mat', category: 'rest', allowedSlots: ['floor'] },
   {
-    id: 'flower_shell_offering',
-    name: 'Flower & Shell Offering',
+    id: 'awa_offering',
+    name: 'ʻAwa Offering',
     category: 'relationship',
     allowedSlots: ['shelf', 'cubby', 'floor'],
   },

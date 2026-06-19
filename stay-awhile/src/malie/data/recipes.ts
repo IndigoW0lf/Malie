@@ -141,12 +141,11 @@ export const RECIPES: Recipe[] = [
 
   // ─── Relationship / Offerings ──────────────────────────────────────────────
   {
-    id: 'flower_shell_offering',
-    name: 'Flower & Shell Offering',
+    id: 'awa_offering',
+    name: 'ʻAwa Offering',
     category: 'relationship',
-    description: 'A quiet offering of gratitude.',
-    ingredients: { flower: 1, shell: 1 },
-    availableWhen: { tides: ['low', 'falling'] },
+    description: 'Prepared ʻawa in a plain gourd cup, offered with prayer and care.',
+    ingredients: { awa: 2, gourd: 1 },
     result: { placeable: true, offering: true },
   },
   {
@@ -255,7 +254,7 @@ export const RECIPE_GLYPHS: Record<string, string> = {
   fishing_net: '🕸️',
   fish_basket: '🧺',
   limu_basket: '🪣',
-  flower_shell_offering: '🌸',
+  awa_offering: '🍵',
   shell_bowl: '🥣',
   water_bowl: '🥛',
   wind_chime: '🎐',

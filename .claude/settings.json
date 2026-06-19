@@ -30,7 +30,10 @@
       "Bash(rm -rf \"$HOME/Library/Caches/com.todesktop.230313mzl4w4u92.ShipIt\" \\\\ *)",
       "Bash(awk '{print \"disk free: \"$4}')",
       "Bash(grep -n \"^\\\\.m-sheet\\\\b\\\\|^\\\\.m-sheet {\\\\|^\\\\.m-sheet-craft\\\\|^\\\\.m-bottombar\\\\|^\\\\.m-sheet,\" src/malie/malie.css)",
-      "Bash(grep -n \"className=\\\\\"m-spirit\\\\|className={\\\\`m-spirit\" components/SpiritCard.tsx)"
+      "Bash(grep -n \"className=\\\\\"m-spirit\\\\|className={\\\\`m-spirit\" components/SpiritCard.tsx)",
+      "Bash(grep -rn \"flower_shell\" src/ *.md docs/)",
+      "Bash(grep -rn \"flower_shell\\\\|Flower-Shell\\\\|Flower Shell\\\\|flower_shell_offering\" .  --exclude-dir=node_modules --exclude-dir=dist)",
+      "Bash(git rm *)"
     ],
     "additionalDirectories": [
       "/Users/indigowolf/Library/Caches/Homebrew",

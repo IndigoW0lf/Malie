@@ -19,7 +19,7 @@ vs. on the floor — which is the whole point of splitting by slot type.
 | Item (`recipeId`)        | Allowed slots              |
 | ------------------------ | -------------------------- |
 | `woven_mat`              | floor                      |
-| `flower_shell_offering`  | shelf, cubby, floor        |
+| `awa_offering`           | shelf, cubby, floor        |
 | `poi_bowl`               | shelf, cubby, floor        |
 | `star_marker`            | shelf, wall, cubby         |
 | `hale_shelf`             | floor, wall                |

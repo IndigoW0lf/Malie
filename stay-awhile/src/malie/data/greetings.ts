@@ -34,8 +34,8 @@ export function memoryLine(placedItems: PlacedItem[], craftedById: Map<string, {
   if (placedRecipeIds.has('star_marker')) {
     return 'Your star marker catches the morning light.';
   }
-  if (placedRecipeIds.has('flower_shell_offering')) {
-    return 'The offering you left still rests by the door.';
+  if (placedRecipeIds.has('awa_offering')) {
+    return 'The ʻawa you offered still rests in its gourd cup by the door.';
   }
   if (placedRecipeIds.has('woven_mat')) {
     return 'The woven mat is warm underfoot.';
