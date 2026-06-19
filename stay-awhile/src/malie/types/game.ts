@@ -39,6 +39,11 @@ export type ResourceId =
   | 'wauke'
   | 'lauhala'
   | 'coral'
+  // crop harvests
+  | 'uala'
+  | 'awa'
+  | 'ti_leaf'
+  | 'banana'
   // prepared materials (made at Craft, consumed by other recipes)
   | 'cordage'
   | 'kapa_cloth';
@@ -291,8 +296,13 @@ export interface GameState {
   rng: number;
   /** Monotonic counter for unique entity ids (never reuses, unlike array length). */
   nextEntityId: number;
-  /** ms to add to client `Date.now()` to project server time (anti-clock-cheat). */
+  /** ms to add to client `Date.now()` to project server time (anti-clock-cheat).
+   *  Re-anchored from the server on every load — not a place to store skips. */
   timeOffsetMs: number;
+  /** Accumulated time the player has skipped forward by resting. Persisted, and
+   *  added on top of the server anchor — so job timestamps stay immutable facts
+   *  and all deliberate time-skipping lives in one field. */
+  skipOffsetMs: number;
 }
 
 /** Everything the reducer understands. */

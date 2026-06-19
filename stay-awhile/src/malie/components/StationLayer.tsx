@@ -16,7 +16,8 @@
 import { useEffect, useState } from 'react';
 import type { GameAction, GameState } from '../types/game';
 import { plotsForPanel, findPlot, findPlantable } from '../data/stations';
-import { jobProgress, isReady, formatRemaining, nextReadyDelta } from '../state/jobs';
+import { jobProgress, isReady, formatRemaining, nextReadyDelta, cropStage } from '../state/jobs';
+import { clockOffsetMs } from '../state/initialState';
 
 interface Props {
   state: GameState;
@@ -24,7 +25,7 @@ interface Props {
 }
 
 export function StationLayer({ state, dispatch }: Props) {
-  const offset = state.timeOffsetMs;
+  const offset = clockOffsetMs(state);
   const [now, setNow] = useState(() => Date.now() + offset);
   useEffect(() => {
     const tick = () => setNow(Date.now() + offset);
@@ -52,6 +53,8 @@ export function StationLayer({ state, dispatch }: Props) {
           <div
             key={job.id}
             className={`m-field${ready ? ' m-field-ready' : ''}`}
+            data-kind={p.kind}
+            data-stage={cropStage(jobProgress(job, now))}
             style={{ left: `${plot.x}%`, top: `${plot.y}%` }}
           >
             {ready ? (

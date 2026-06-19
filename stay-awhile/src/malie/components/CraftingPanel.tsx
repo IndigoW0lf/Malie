@@ -20,7 +20,7 @@ import {
   craftBaseMs,
 } from '../data/recipes';
 import { RESOURCES } from '../data/resources';
-import { canAfford } from '../state/initialState';
+import { canAfford, clockOffsetMs } from '../state/initialState';
 import { deriveModifiers } from '../data/spirits';
 import { craftJob, isReady, jobProgress, formatRemaining } from '../state/jobs';
 
@@ -58,7 +58,7 @@ interface Props {
 }
 
 export function CraftingPanel({ open, state, dispatch, onClose }: Props) {
-  const offset = state.timeOffsetMs;
+  const offset = clockOffsetMs(state);
   const [now, setNow] = useState(() => Date.now() + offset);
   useEffect(() => {
     const tick = () => setNow(Date.now() + offset);

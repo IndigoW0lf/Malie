@@ -18,6 +18,15 @@ export function isReady(job: TimedJob, now: number): boolean {
   return now >= job.readyAt;
 }
 
+/** A coarse growth stage for staged field art: 0 sprout → 1 mid → 2 near-ready
+ *  → 3 ready. Drives `data-stage` on the marker so sprites can swap by stage. */
+export function cropStage(progress: number): 0 | 1 | 2 | 3 {
+  if (progress >= 1) return 3;
+  if (progress >= 0.66) return 2;
+  if (progress >= 0.33) return 1;
+  return 0;
+}
+
 /** The job occupying a station slot, if any. */
 export function jobForStation(jobs: TimedJob[], slotId: string): TimedJob | undefined {
   return jobs.find((j) => j.slotId === slotId);

@@ -29,6 +29,12 @@ export const RESOURCES: Record<ResourceId, Resource> = {
   lauhala: { id: 'lauhala', name: 'Lauhala', glyph: '🍃', note: 'Pandanus leaves for weaving.' },
   coral: { id: 'coral', name: 'Coral', glyph: '🪸', note: 'A piece worn smooth by the sea.' },
 
+  // crop harvests
+  uala: { id: 'uala', name: 'ʻUala', glyph: '🥔', note: 'Sweet potato from the māla.' },
+  awa: { id: 'awa', name: 'ʻAwa', glyph: '🫚', note: 'Kava root, for ceremony and rest.' },
+  ti_leaf: { id: 'ti_leaf', name: 'Lāʻī', glyph: '🎍', note: 'Tī leaf — wrapping, blessing, protection.' },
+  banana: { id: 'banana', name: 'Maiʻa', glyph: '🍌', note: 'Banana from the grove.' },
+
   // prepared materials
   cordage: { id: 'cordage', name: 'Cordage', glyph: '🧶', note: 'Twisted fiber, ready to bind.' },
   kapa_cloth: { id: 'kapa_cloth', name: 'Kapa Cloth', glyph: '🧻', note: 'Beaten bark cloth.' },

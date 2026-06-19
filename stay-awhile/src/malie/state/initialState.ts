@@ -41,10 +41,16 @@ export function rngNext(seed: number): [value: number, next: number] {
   return [value, t >>> 0];
 }
 
-/** The canonical "now" for the game, projected to server time. Anchored once on
- *  load (see useGame); falls back to the client clock until then. */
-export function gameNow(state: Pick<GameState, 'timeOffsetMs'>): number {
-  return Date.now() + state.timeOffsetMs;
+/** Total ms to add to the client clock: the server anchor plus any time the
+ *  player has skipped by resting. */
+export function clockOffsetMs(state: Pick<GameState, 'timeOffsetMs' | 'skipOffsetMs'>): number {
+  return state.timeOffsetMs + state.skipOffsetMs;
+}
+
+/** The canonical "now" for the game: server-anchored, advanced by rests. Anchored
+ *  on load (see useGame); falls back to the client clock until then. */
+export function gameNow(state: Pick<GameState, 'timeOffsetMs' | 'skipOffsetMs'>): number {
+  return Date.now() + clockOffsetMs(state);
 }
 
 export function createInitialState(seed: number = DEFAULT_SEED): GameState {
@@ -53,6 +59,7 @@ export function createInitialState(seed: number = DEFAULT_SEED): GameState {
     rng: seed >>> 0,
     nextEntityId: 1,
     timeOffsetMs: 0,
+    skipOffsetMs: 0,
     day,
     season: seasonForDay(day),
     tide: tideForDay(day),

@@ -17,7 +17,7 @@ import { getSlot } from '../data/haleSlots';
 import { allowsSlotType } from '../data/craftables';
 import { guidanceForDay } from '../data/guidance';
 import { resourceName } from '../data/resources';
-import { findPlantable, slotsForPlantable } from '../data/stations';
+import { findPlantable, slotsForPlantable, resolveNetCatch } from '../data/stations';
 import {
   SPIRITS,
   LEVEL_NAMES,
@@ -396,25 +396,46 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (!isReady(job, gameNow(state))) return state;
       const p = findPlantable(job.definitionId);
 
+      // Crops collect their snapshotted yield. A net's catch is resolved HERE,
+      // so tide, the day's sign, and Pilina shape what comes home.
+      let rngState = state.rng;
+      let gained = job.yield;
+      let speciesNote: string | undefined;
+      if (job.kind === 'net' && p) {
+        const mods = deriveModifiers(state.spirits);
+        const [roll, nr] = rngNext(rngState);
+        rngState = nr;
+        const res = resolveNetCatch(p, {
+          tide: state.tide,
+          guidanceId: state.guidanceId,
+          netYieldBonus: mods.netYieldBonus,
+          preventEmptyNet: mods.preventEmptyNet,
+          roll,
+        });
+        gained = res.items;
+        speciesNote = res.species;
+      }
+
       const { spirits, messages, rng } = applySpiritGains(
         state.spirits,
         job.spiritGain ?? {},
         nearSpiritFor(state.guidanceId),
         true, // tending the land/sea is deliberate — it lands
-        state.rng,
+        rngState,
       );
+
+      const line =
+        job.kind === 'crop'
+          ? `You harvest the ${p?.name ?? ''} — ${describeRewards(gained)}.`
+          : `You haul in the ${p?.name ?? ''}${speciesNote ? ` — ${speciesNote}` : ''}. ${describeRewards(gained)}.`;
 
       return {
         ...state,
-        inventory: addRewards(state.inventory, job.yield),
+        inventory: addRewards(state.inventory, gained),
         jobs: state.jobs.filter((j) => j.id !== job.id),
         spirits,
         rng,
-        messageLog: pushLog(
-          state.messageLog,
-          ...messages,
-          `${job.kind === 'crop' ? 'You harvest' : 'You haul in'} the ${p?.name ?? ''} — ${describeRewards(job.yield)}.`,
-        ),
+        messageLog: pushLog(state.messageLog, ...messages, line),
       };
     }
 
@@ -502,16 +523,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'REST_UNTIL_NEXT_READY': {
       const delta = nextReadyDelta(state);
       if (delta == null || delta <= 0) return state;
-      // Pull every job back by the same delta so the soonest becomes ready now;
-      // relative progress between jobs is preserved.
-      const jobs = state.jobs.map((j) => ({
-        ...j,
-        startedAt: j.startedAt - delta,
-        readyAt: j.readyAt - delta,
-      }));
+      // Advance the game clock by the wait. Job timestamps stay immutable facts;
+      // all deliberate time-skipping lives in skipOffsetMs.
       return {
         ...state,
-        jobs,
+        skipOffsetMs: state.skipOffsetMs + delta,
         messageLog: pushLog(state.messageLog, 'You sit a while. Something is ready.'),
       };
     }

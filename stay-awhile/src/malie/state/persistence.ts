@@ -19,8 +19,9 @@ import { loadSave, persistSave, defaultSaveState } from '../../services/storage'
 import { createInitialState } from './initialState';
 
 /** Current Mālie save schema version. Bump when the shape changes.
- *  v1 → v2: added `jobs` (timed crops / nets / crafts). */
-export const SAVE_VERSION = 2;
+ *  v1 → v2: added `jobs` (timed crops / nets / crafts).
+ *  v2 → v3: added `skipOffsetMs` (rest-forward game-clock skip). */
+export const SAVE_VERSION = 3;
 
 const LOCAL_KEY = 'malie_save_v1';
 
@@ -69,6 +70,7 @@ function coerce(data: unknown): GameState | null {
     g.nextEntityId = (g.craftedItems as unknown[]).length + 1;
   }
   if (typeof g.timeOffsetMs !== 'number') g.timeOffsetMs = 0;
+  if (typeof g.skipOffsetMs !== 'number') g.skipOffsetMs = 0; // v3
 
   // v2: timed jobs. Default to none, and drop any malformed entries.
   if (!Array.isArray(g.jobs)) g.jobs = [];

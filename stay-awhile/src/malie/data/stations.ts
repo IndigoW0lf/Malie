@@ -16,9 +16,21 @@
  * Durations are short here so growth is visible within a jam session; lengthen
  * them toward "come back later" for release. Pilina deepens via deriveModifiers.
  */
-import type { Inventory, PanelId, SpiritId } from '../types/game';
+import type { Inventory, PanelId, ResourceId, SpiritId, Tide } from '../types/game';
 
 export type SlotGroup = 'garden' | 'loi' | 'grove' | 'net';
+
+/** One possible result of hauling a net — picked at collection time by weight. */
+export interface CatchOption {
+  /** Display name (Hawaiian fish), recorded in the message/journal. */
+  species: string;
+  /** Relative likelihood. */
+  weight: number;
+  /** Fish this catch brings. */
+  fish: number;
+  /** Anything else it brings (limu, shell). */
+  extra?: Inventory;
+}
 
 /** A fixed spot on a scene that can hold one running job. */
 export interface PlotSlot {
@@ -52,6 +64,14 @@ export interface Plantable {
   readyVerb: string;
   /** Word for the in-progress state ("growing", "soaking"). */
   workingLabel: string;
+
+  // ─── net-only: the catch is resolved at collect time, not snapshotted ───────
+  /** Possible species; one is chosen by weighted roll when hauled in. */
+  catch?: CatchOption[];
+  /** Tides that improve the haul (+1 fish). */
+  tideBoost?: Tide[];
+  /** A day's sign that improves the haul (+1 fish). */
+  luckySign?: string;
 }
 
 /** One game-minute, in ms. */
@@ -75,8 +95,11 @@ export const PLOTS: PlotSlot[] = [
 ];
 
 // ─── Plantables: what you can plant / set ──────────────────────────────────────
+// The garden pool holds many more crops than there are beds (3), so choosing
+// what to grow — food, fabric, cordage, offering, or relationship crop — is the
+// real decision. The loʻi is for kalo; the grove for trees.
 export const PLANTABLES: Plantable[] = [
-  // Kula / Kahawai
+  // ─── Loʻi ──────────────────────────────────────────────────────────────────
   {
     id: 'kalo',
     kind: 'crop',
@@ -85,8 +108,66 @@ export const PLANTABLES: Plantable[] = [
     glyph: '🌱',
     panelId: 'kula_kahawai',
     durationMs: 5 * MIN,
-    baseYield: { kalo: 2, fiber: 1 },
+    baseYield: { kalo: 3, leaf: 1 },
     spiritGain: { lono: 1, moo_aumakua: 1, kane: 1 },
+    startVerb: 'Plant',
+    readyVerb: 'Harvest',
+    workingLabel: 'growing',
+  },
+
+  // ─── Garden beds (pool of 3 — pick among these) ─────────────────────────────
+  {
+    id: 'uala',
+    kind: 'crop',
+    group: 'garden',
+    name: 'ʻUala (Sweet Potato)',
+    glyph: '🥔',
+    panelId: 'kula_kahawai',
+    durationMs: 4 * MIN,
+    baseYield: { uala: 3, leaf: 1 },
+    spiritGain: { lono: 1 },
+    startVerb: 'Plant',
+    readyVerb: 'Harvest',
+    workingLabel: 'growing',
+  },
+  {
+    id: 'wauke',
+    kind: 'crop',
+    group: 'garden',
+    name: 'Wauke (Paper Mulberry)',
+    glyph: '🟫',
+    panelId: 'kula_kahawai',
+    durationMs: 6 * MIN,
+    baseYield: { wauke: 3, bark_fiber: 1 },
+    spiritGain: { ku: 1, lono: 1 },
+    startVerb: 'Plant',
+    readyVerb: 'Strip',
+    workingLabel: 'growing',
+  },
+  {
+    id: 'ti',
+    kind: 'crop',
+    group: 'garden',
+    name: 'Kī (Tī Leaf)',
+    glyph: '🎍',
+    panelId: 'kula_kahawai',
+    durationMs: 4 * MIN,
+    baseYield: { ti_leaf: 3 },
+    spiritGain: { lono: 1, pueo_aumakua: 1 },
+    startVerb: 'Plant',
+    readyVerb: 'Gather',
+    workingLabel: 'growing',
+  },
+  {
+    id: 'awa',
+    kind: 'crop',
+    group: 'garden',
+    name: 'ʻAwa (Kava)',
+    glyph: '🫚',
+    panelId: 'kula_kahawai',
+    durationMs: 8 * MIN,
+    baseYield: { awa: 2 },
+    spiritGain: { kane: 1, lono: 1 },
     startVerb: 'Plant',
     readyVerb: 'Harvest',
     workingLabel: 'growing',
@@ -127,12 +208,14 @@ export const PLANTABLES: Plantable[] = [
     glyph: '🥥',
     panelId: 'kula_kahawai',
     durationMs: 6 * MIN,
-    baseYield: { gourd: 1, wauke: 1 },
+    baseYield: { gourd: 2 },
     spiritGain: { lono: 1 },
     startVerb: 'Plant',
     readyVerb: 'Harvest',
     workingLabel: 'growing',
   },
+
+  // ─── Grove ──────────────────────────────────────────────────────────────────
   {
     id: 'kukui',
     kind: 'crop',
@@ -141,14 +224,28 @@ export const PLANTABLES: Plantable[] = [
     glyph: '🌳',
     panelId: 'kula_kahawai',
     durationMs: 8 * MIN,
-    baseYield: { wood: 2, kukui: 1 },
+    baseYield: { kukui: 3 },
     spiritGain: { ku: 1 },
     startVerb: 'Tend',
     readyVerb: 'Gather',
     workingLabel: 'ripening',
   },
+  {
+    id: 'maia',
+    kind: 'crop',
+    group: 'grove',
+    name: 'Maiʻa (Banana)',
+    glyph: '🍌',
+    panelId: 'kula_kahawai',
+    durationMs: 7 * MIN,
+    baseYield: { banana: 3 },
+    spiritGain: { lono: 1, kane: 1 },
+    startVerb: 'Tend',
+    readyVerb: 'Gather',
+    workingLabel: 'ripening',
+  },
 
-  // Kahakai / Moana — nets (need a Fishing Net)
+  // ─── Kahakai / Moana — nets (need a Fishing Net; catch resolved on haul) ─────
   {
     id: 'net_fishpond',
     kind: 'net',
@@ -163,6 +260,13 @@ export const PLANTABLES: Plantable[] = [
     startVerb: 'Set net',
     readyVerb: 'Haul in',
     workingLabel: 'soaking',
+    tideBoost: ['high', 'rising'],
+    luckySign: 'iwa_birds',
+    catch: [
+      { species: 'ʻamaʻama', weight: 3, fish: 2 },
+      { species: 'ʻanae', weight: 2, fish: 2 },
+      { species: 'ʻōpae', weight: 1, fish: 1 },
+    ],
   },
   {
     id: 'net_shore',
@@ -178,6 +282,13 @@ export const PLANTABLES: Plantable[] = [
     startVerb: 'Set net',
     readyVerb: 'Haul in',
     workingLabel: 'soaking',
+    tideBoost: ['low', 'falling'],
+    luckySign: 'iwa_birds',
+    catch: [
+      { species: 'manini', weight: 3, fish: 1, extra: { limu: 1 } },
+      { species: 'ʻōpelu', weight: 2, fish: 2 },
+      { species: 'weke', weight: 1, fish: 1, extra: { limu: 1 } },
+    ],
   },
   {
     id: 'net_reef',
@@ -193,6 +304,13 @@ export const PLANTABLES: Plantable[] = [
     startVerb: 'Set net',
     readyVerb: 'Haul in',
     workingLabel: 'soaking',
+    tideBoost: ['low'],
+    luckySign: 'watchful_sea',
+    catch: [
+      { species: 'uhu', weight: 2, fish: 2, extra: { shell: 1 } },
+      { species: 'kūmū', weight: 2, fish: 2 },
+      { species: 'weke', weight: 1, fish: 1, extra: { shell: 1 } },
+    ],
   },
 ];
 
@@ -225,4 +343,48 @@ export function plotsForPanel(panelId: PanelId): PlotSlot[] {
 /** The slots in a plantable's pool (same group + panel). */
 export function slotsForPlantable(p: Plantable): PlotSlot[] {
   return PLOTS.filter((s) => s.group === p.group && s.panelId === p.panelId);
+}
+
+/**
+ * Resolve a net's catch at haul-in time (not at set time), so tide, the day's
+ * sign, and Pilina all shape the result. `roll` is a single PRNG value in [0,1);
+ * the reducer threads the seeded rng and passes it in (keeping the reducer pure).
+ */
+export function resolveNetCatch(
+  net: Plantable,
+  opts: {
+    tide: Tide;
+    guidanceId: string;
+    netYieldBonus: number;
+    preventEmptyNet: boolean;
+    roll: number;
+  },
+): { items: Inventory; species: string } {
+  const table = net.catch ?? [];
+  if (table.length === 0) return { items: { ...net.baseYield }, species: 'a modest catch' };
+
+  const total = table.reduce((s, c) => s + c.weight, 0);
+  let pick = opts.roll * total;
+  let chosen = table[table.length - 1]!;
+  for (const c of table) {
+    if (pick < c.weight) {
+      chosen = c;
+      break;
+    }
+    pick -= c.weight;
+  }
+
+  let fish = chosen.fish;
+  if (net.tideBoost?.includes(opts.tide)) fish += 1; // the tide is right
+  if (net.luckySign && net.luckySign === opts.guidanceId) fish += 1; // the sign is with you
+  fish += opts.netYieldBonus; // Kanaloa / Manō blessing
+  if (fish < 1 && opts.preventEmptyNet) fish = 1; // the net is never empty
+
+  const items: Inventory = fish > 0 ? { fish } : {};
+  if (chosen.extra) {
+    for (const [id, n] of Object.entries(chosen.extra) as [ResourceId, number][]) {
+      items[id] = (items[id] ?? 0) + n;
+    }
+  }
+  return { items, species: chosen.species };
 }
