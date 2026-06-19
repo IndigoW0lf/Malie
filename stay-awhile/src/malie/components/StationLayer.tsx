@@ -14,10 +14,18 @@
  * TODO(art): swap the glyph for staged field sprites at public/fields/<id>/.
  */
 import { useEffect, useState } from 'react';
-import type { GameAction, GameState } from '../types/game';
-import { plotsForPanel, findPlot, findPlantable } from '../data/stations';
+import type { GameAction, GameState, SpiritId } from '../types/game';
+import { plotsForPanel, findPlot, findPlantable, type Plantable } from '../data/stations';
 import { jobProgress, isReady, formatRemaining, nextReadyDelta, cropStage } from '../state/jobs';
 import { clockOffsetMs } from '../state/initialState';
+import { SPIRITS } from '../data/spirits';
+
+/** The presences who tend this crop/net — named for the offering option. */
+function tendingNames(p: Plantable): string {
+  return Object.keys(p.spiritGain ?? {})
+    .map((id) => SPIRITS[id as SpiritId].name)
+    .join(', ');
+}
 
 interface Props {
   state: GameState;
@@ -27,12 +35,19 @@ interface Props {
 export function StationLayer({ state, dispatch }: Props) {
   const offset = clockOffsetMs(state);
   const [now, setNow] = useState(() => Date.now() + offset);
+  /** The ready job whose harvest-choice popover is open, if any. */
+  const [choosing, setChoosing] = useState<string | null>(null);
   useEffect(() => {
     const tick = () => setNow(Date.now() + offset);
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [offset]);
+
+  const collect = (jobId: string, offer: boolean) => {
+    dispatch({ type: 'COLLECT_JOB', jobId, offer });
+    setChoosing(null);
+  };
 
   const plots = plotsForPanel(state.activePanel);
   if (plots.length === 0) return null;
@@ -58,15 +73,41 @@ export function StationLayer({ state, dispatch }: Props) {
             style={{ left: `${plot.x}%`, top: `${plot.y}%` }}
           >
             {ready ? (
-              <button
-                className="m-field-collect"
-                onClick={() => dispatch({ type: 'COLLECT_JOB', jobId: job.id })}
-              >
-                <span className="m-field-glyph" aria-hidden>
-                  {p.glyph}
-                </span>
-                <span className="m-field-verb">{p.readyVerb}</span>
-              </button>
+              <>
+                <button
+                  className="m-field-collect"
+                  onClick={() => setChoosing((c) => (c === job.id ? null : job.id))}
+                >
+                  <span className="m-field-glyph" aria-hidden>
+                    {p.glyph}
+                  </span>
+                  <span className="m-field-verb">{p.readyVerb}</span>
+                </button>
+                {choosing === job.id && (
+                  <div className="m-field-menu">
+                    <button className="m-field-menu-row" onClick={() => collect(job.id, false)}>
+                      {job.kind === 'crop' ? 'Harvest all' : 'Haul in all'}
+                    </button>
+                    <button
+                      className="m-field-menu-row m-field-menu-offer"
+                      onClick={() => collect(job.id, true)}
+                    >
+                      <span>
+                        {job.kind === 'crop' ? 'Set aside the first portion' : 'Return one to the sea'}
+                      </span>
+                      {tendingNames(p) && (
+                        <span className="m-field-menu-sub">an offering · {tendingNames(p)}</span>
+                      )}
+                    </button>
+                    <button
+                      className="m-field-menu-row m-field-menu-leave"
+                      onClick={() => setChoosing(null)}
+                    >
+                      Leave for now
+                    </button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="m-field-grow">
                 <span className="m-field-glyph" aria-hidden>

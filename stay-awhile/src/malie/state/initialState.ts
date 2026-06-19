@@ -3,6 +3,7 @@
  */
 import type { GameState, Inventory, ResourceId, Season, Tide } from '../types/game';
 import { guidanceForDay } from '../data/guidance';
+import { skyPatternForSeason } from '../data/sky';
 import { greetingForDay } from '../data/greetings';
 
 /** Tide cycles once per day, in order. */
@@ -64,6 +65,8 @@ export function createInitialState(seed: number = DEFAULT_SEED): GameState {
     season: seasonForDay(day),
     tide: tideForDay(day),
     guidanceId: guidanceForDay(day).id,
+    skyPatternId: skyPatternForSeason(seasonForDay(day)),
+    skyJournal: [],
     activePanel: 'hale',
     inventory: {},
     craftedItems: [],

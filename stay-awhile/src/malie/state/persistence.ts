@@ -14,14 +14,18 @@
  * any field a newer build expects. As the schema grows (timed jobs, farm plots),
  * add a step to `migrate()` and bump SAVE_VERSION.
  */
-import type { GameState } from '../types/game';
+import type { GameState, Season } from '../types/game';
 import { loadSave, persistSave, defaultSaveState } from '../../services/storage';
 import { createInitialState } from './initialState';
+import { skyPatternForSeason } from '../data/sky';
+
+const SEASONS: Season[] = ['Hooilo', 'Kau', 'Makahiki', 'Transition'];
 
 /** Current Mālie save schema version. Bump when the shape changes.
  *  v1 → v2: added `jobs` (timed crops / nets / crafts).
- *  v2 → v3: added `skipOffsetMs` (rest-forward game-clock skip). */
-export const SAVE_VERSION = 3;
+ *  v2 → v3: added `skipOffsetMs` (rest-forward game-clock skip).
+ *  v3 → v4: added `skyPatternId` + `skyJournal` (Ka Lani, the sky journal). */
+export const SAVE_VERSION = 4;
 
 const LOCAL_KEY = 'malie_save_v1';
 
@@ -71,6 +75,13 @@ function coerce(data: unknown): GameState | null {
   }
   if (typeof g.timeOffsetMs !== 'number') g.timeOffsetMs = 0;
   if (typeof g.skipOffsetMs !== 'number') g.skipOffsetMs = 0; // v3
+
+  // v4: the sky journal. Default the pattern from the save's own season.
+  if (typeof g.skyPatternId !== 'string') {
+    const season = SEASONS.includes(g.season as Season) ? (g.season as Season) : d.season;
+    g.skyPatternId = skyPatternForSeason(season);
+  }
+  if (!Array.isArray(g.skyJournal)) g.skyJournal = [];
 
   // v2: timed jobs. Default to none, and drop any malformed entries.
   if (!Array.isArray(g.jobs)) g.jobs = [];

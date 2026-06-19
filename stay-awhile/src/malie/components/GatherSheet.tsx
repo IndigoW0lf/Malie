@@ -11,9 +11,11 @@ interface Props {
   state: GameState;
   dispatch: React.Dispatch<GameAction>;
   onClose: () => void;
+  /** Reading the sky opens its own little interaction instead of an instant gather. */
+  onObserveSky: () => void;
 }
 
-export function GatherSheet({ state, dispatch, onClose }: Props) {
+export function GatherSheet({ state, dispatch, onClose, onObserveSky }: Props) {
   const actions = ACTIONS_BY_PANEL[state.activePanel] ?? [];
   const place = PANELS_BY_ID[state.activePanel];
 
@@ -48,7 +50,11 @@ export function GatherSheet({ state, dispatch, onClose }: Props) {
                 <button
                   className={`m-gather-row${used ? ' m-gather-used' : ''}${restraint ? ' m-gather-give' : ''}`}
                   disabled={disabled}
-                  onClick={() => dispatch({ type: 'PERFORM_PANEL_ACTION', actionId: a.id })}
+                  onClick={() =>
+                    a.id === 'observe_stars'
+                      ? onObserveSky()
+                      : dispatch({ type: 'PERFORM_PANEL_ACTION', actionId: a.id })
+                  }
                 >
                   <span className="m-gather-text">
                     <span className="m-gather-label">{a.label}</span>

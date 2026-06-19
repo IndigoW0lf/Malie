@@ -25,12 +25,16 @@ import { PlacedItemLayer } from './components/PlacedItemLayer';
 import { PlacementOverlay } from './components/PlacementOverlay';
 import { HaleCalibrator } from './components/HaleCalibrator';
 import { PilinaMap } from './components/PilinaMap';
+import { SkyJournal } from './components/SkyJournal';
+import { SkyObserve } from './components/SkyObserve';
 import {
   sceneVariantForState,
   sceneBackground,
   constellationImage,
   showsConstellations,
 } from './data/scenes';
+import { SKY_PATTERNS } from './data/sky';
+import type { SkyPatternId } from './data/sky';
 
 export default function MalieApp() {
   const { state, dispatch, ready } = useGame();
@@ -43,6 +47,10 @@ export default function MalieApp() {
   const [calOpen, setCalOpen] = useState(false);
   /** Pilina relationship map overlay. */
   const [pilinaOpen, setPilinaOpen] = useState(false);
+  /** Sky journal (Ka Lani) overlay. */
+  const [skyOpen, setSkyOpen] = useState(false);
+  /** The Observe-Stars interaction, when open. */
+  const [observing, setObserving] = useState(false);
 
   const inventoryCount = Object.values(state.inventory).reduce((n, c) => n + (c ?? 0), 0);
 
@@ -105,6 +113,7 @@ export default function MalieApp() {
         inventoryCount={inventoryCount}
         onToggleInventory={() => setBagOpen((v) => !v)}
         onOpenPilina={() => setPilinaOpen(true)}
+        onOpenSky={() => setSkyOpen(true)}
       />
 
       <main className="m-main">
@@ -124,7 +133,15 @@ export default function MalieApp() {
 
       {/* Expanding trays sit above the bar; one open at a time. */}
       {openSheet === 'gather' && !isHale && (
-        <GatherSheet state={state} dispatch={dispatch} onClose={() => setOpenSheet(null)} />
+        <GatherSheet
+          state={state}
+          dispatch={dispatch}
+          onClose={() => setOpenSheet(null)}
+          onObserveSky={() => {
+            setOpenSheet(null);
+            setObserving(true);
+          }}
+        />
       )}
       {openSheet === 'tend' && hasTend && (
         <ActionsSheet state={state} dispatch={dispatch} onClose={() => setOpenSheet(null)} />
@@ -150,6 +167,19 @@ export default function MalieApp() {
 
       {pilinaOpen && (
         <PilinaMap state={state} dispatch={dispatch} onClose={() => setPilinaOpen(false)} />
+      )}
+
+      {skyOpen && <SkyJournal state={state} onClose={() => setSkyOpen(false)} />}
+
+      {observing && (
+        <SkyObserve
+          pattern={SKY_PATTERNS[state.skyPatternId as SkyPatternId]}
+          onObserve={(traced) => {
+            dispatch({ type: 'OBSERVE_SKY', traced });
+            setObserving(false);
+          }}
+          onClose={() => setObserving(false)}
+        />
       )}
 
       {/* Placement mode — only in the hale, only while an item is selected. */}

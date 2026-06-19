@@ -16,6 +16,7 @@ import { findRecipe, isToolRecipe, craftBaseMs } from '../data/recipes';
 import { getSlot } from '../data/haleSlots';
 import { allowsSlotType } from '../data/craftables';
 import { guidanceForDay } from '../data/guidance';
+import { SKY_PATTERNS, skyPatternForSeason, skyReadingForLevel } from '../data/sky';
 import { resourceName } from '../data/resources';
 import { findPlantable, slotsForPlantable, resolveNetCatch } from '../data/stations';
 import {
@@ -69,6 +70,25 @@ function craftedId(recipeId: string, state: GameState): string {
 /** Unique id for a timed job, from the same monotonic counter. */
 function jobId(state: GameState): string {
   return `job-e${state.nextEntityId}`;
+}
+
+/** Pilina added to each tending presence when the first portion is set aside /
+ *  a catch is returned — the gesture that makes harvest itself an offering. */
+const FIRST_PORTION_BONUS = 2;
+
+/** Take one of the primary resource back out of a yield (the "first portion").
+ *  Returns the lessened yield and the resource set aside, or null if there's
+ *  nothing to give. */
+function setAsideFirstPortion(
+  gained: Inventory,
+): { kept: Inventory; given: ResourceId } | null {
+  const primary = (Object.keys(gained) as ResourceId[]).find((id) => (gained[id] ?? 0) > 0);
+  if (!primary) return null;
+  const kept: Inventory = { ...gained };
+  const left = (kept[primary] ?? 0) - 1;
+  if (left > 0) kept[primary] = left;
+  else delete kept[primary];
+  return { kept, given: primary };
 }
 
 /** A station's collect yield, with a yield bonus folded into its primary drop. */
@@ -223,6 +243,63 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           ...messages,
           `You offer the ${item.name} to ${SPIRITS[action.spiritId].name}. The pilina deepens.`,
         ),
+      };
+    }
+
+    case 'OBSERVE_SKY': {
+      // Reading the sky is the day's one star-observation (shares its gate).
+      if (state.actionsUsedToday.includes('observe_stars')) return state;
+      const pattern = SKY_PATTERNS[state.skyPatternId as keyof typeof SKY_PATTERNS];
+      if (!pattern) return state;
+
+      // A careful (traced) reading is a deliberate act — it lands and yields a
+      // star sign. A glance is only a chance to be noticed by Pueo.
+      const { spirits, messages: spiritMsgs, rng } = applySpiritGains(
+        state.spirits,
+        { pueo_aumakua: action.traced ? 2 : 1 },
+        nearSpiritFor(state.guidanceId),
+        action.traced,
+        state.rng,
+      );
+
+      // Record (or upgrade) the journal entry.
+      const existing = state.skyJournal.find((e) => e.patternId === pattern.id);
+      const noticed = action.traced
+        ? pattern.risesText
+        : 'You glimpsed it, but did not trace its path.';
+      let skyJournal = state.skyJournal;
+      if (!existing) {
+        skyJournal = [
+          ...state.skyJournal,
+          { patternId: pattern.id, discoveredDay: state.day, traced: action.traced, noticed },
+        ];
+      } else if (action.traced && !existing.traced) {
+        skyJournal = state.skyJournal.map((e) =>
+          e.patternId === pattern.id ? { ...e, traced: true, noticed } : e,
+        );
+      }
+
+      // The sky-reading deepens with Pueo; the forecast looks to tomorrow.
+      const reading = skyReadingForLevel(
+        pattern,
+        spirits.pueo_aumakua.points,
+        guidanceForDay(state.day + 1),
+        tideForDay(state.day + 1),
+      );
+      const gained: Inventory = action.traced ? { star_sign: 1 } : {};
+
+      const lead = action.traced
+        ? `You trace ${pattern.name}. ${pattern.risesText}`
+        : `You sit with the sky a while.`;
+
+      return {
+        ...state,
+        inventory: addRewards(state.inventory, gained),
+        actionsUsedToday: [...state.actionsUsedToday, 'observe_stars'],
+        spirits,
+        rng,
+        skyJournal,
+        messageLog: pushLog(state.messageLog, ...spiritMsgs, lead, reading),
       };
     }
 
@@ -416,18 +493,40 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         speciesNote = res.species;
       }
 
+      // The harvest itself can be an offering: set aside the first portion (crop)
+      // or return one to the sea (net). A little less yield, a deeper pilina with
+      // the presences who tend this place — a deliberate gift, so it lands.
+      const gains: Partial<Record<SpiritId, number>> = { ...(job.spiritGain ?? {}) };
+      const aside = action.offer ? setAsideFirstPortion(gained) : null;
+      if (aside) {
+        gained = aside.kept;
+        for (const id of Object.keys(gains) as SpiritId[]) {
+          gains[id] = (gains[id] ?? 0) + FIRST_PORTION_BONUS;
+        }
+      }
+
       const { spirits, messages, rng } = applySpiritGains(
         state.spirits,
-        job.spiritGain ?? {},
+        gains,
         nearSpiritFor(state.guidanceId),
         true, // tending the land/sea is deliberate — it lands
         rngState,
       );
 
-      const line =
-        job.kind === 'crop'
-          ? `You harvest the ${p?.name ?? ''} — ${describeRewards(gained)}.`
-          : `You haul in the ${p?.name ?? ''}${speciesNote ? ` — ${speciesNote}` : ''}. ${describeRewards(gained)}.`;
+      const rewardText = describeRewards(gained);
+      const keptText = rewardText ? ` — ${rewardText}` : '';
+      let line: string;
+      if (job.kind === 'crop') {
+        const base = `You harvest the ${p?.name ?? ''}`;
+        line = aside
+          ? `You set aside the first ${resourceName(aside.given).toLowerCase()} as an offering. ${base}${keptText}.`
+          : `${base}${keptText}.`;
+      } else {
+        const haul = `You haul in the ${p?.name ?? ''}${speciesNote ? ` — ${speciesNote}` : ''}.`;
+        line = aside
+          ? `You return one ${resourceName(aside.given).toLowerCase()} to the sea. ${haul}${keptText}`
+          : `${haul} ${rewardText}.`;
+      }
 
       return {
         ...state,
@@ -541,6 +640,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const lines = [...dawn];
       if (seasonTurned) lines.push(`The season turns toward ${season}.`);
 
+      // The sky's slow layer follows the season, not the day.
+      const skyPatternId = skyPatternForSeason(season);
+      if (skyPatternId !== state.skyPatternId) {
+        lines.push(`A new pattern takes the night sky: ${SKY_PATTERNS[skyPatternId].name}.`);
+      }
+
       // Who is near today, if the player has come to know them.
       const nearId = nearSpiritFor(guidanceForDay(day).id);
       if (nearId && state.spirits[nearId].discovered) {
@@ -557,6 +662,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         season,
         tide: tideForDay(day),
         guidanceId: guidanceForDay(day).id,
+        skyPatternId,
         actionsUsedToday: [],
         messageLog: pushLog(state.messageLog, `— Day ${day} —`, ...lines),
       };

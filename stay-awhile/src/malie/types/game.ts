@@ -248,6 +248,21 @@ export interface Guidance {
   effectDescription: string;
 }
 
+// ─── Ka Lani (the sky journal) ───────────────────────────────────────────────
+
+/** A sky pattern the player has come to know, and what they noticed of it. This
+ *  is recorded knowledge unique to a save — the sky's half of "memory". */
+export interface SkyJournalEntry {
+  /** Matches a SkyPatternId (see data/sky.ts). */
+  patternId: string;
+  /** The day it was first observed. */
+  discoveredDay: number;
+  /** Whether the player traced it carefully (a clearer note) vs only glimpsed it. */
+  traced: boolean;
+  /** The line recorded under "what you noticed". */
+  noticed: string;
+}
+
 // ─── Pilina (relationships with akua / ʻaumākua) ─────────────────────────────
 
 /** The presences the player can come into relationship with. */
@@ -288,6 +303,11 @@ export interface GameState {
   spirits: Record<SpiritId, SpiritRelationship>;
   /** Running timed jobs — crops growing, nets soaking, crafts building. */
   jobs: TimedJob[];
+  /** The sky pattern dominant now — slow, seasonal (see data/sky.ts). Kept
+   *  separate from `guidanceId` (the fast daily sign). */
+  skyPatternId: string;
+  /** Patterns the player has observed, with what they noticed (the Sky Journal). */
+  skyJournal: SkyJournalEntry[];
   /** Newest-first log of gentle messages. */
   messageLog: string[];
 
@@ -311,14 +331,19 @@ export type GameAction =
   | { type: 'PERFORM_PANEL_ACTION'; actionId: string }
   | { type: 'CRAFT'; recipeId: string }
   | { type: 'OFFER_TO_SPIRIT'; spiritId: SpiritId; craftedItemId: string }
+  /** Observe tonight's sky pattern. `traced` = the player completed the tracing
+   *  carefully (a clearer note + a star sign) vs only glimpsed it. */
+  | { type: 'OBSERVE_SKY'; traced: boolean }
   | { type: 'PLACE_ITEM'; craftedItemId: string; slotId: string }
   // ─── timed jobs ────────────────────────────────────────────────────────────
   /** Plant a crop / set a net — claims the next free slot in its pool. */
   | { type: 'START_JOB'; plantableId: string }
   /** A one-time tending gesture on a growing crop. */
   | { type: 'TEND_JOB'; jobId: string }
-  /** Harvest a crop / haul in a net once ready. */
-  | { type: 'COLLECT_JOB'; jobId: string }
+  /** Harvest a crop / haul in a net once ready. `offer` sets aside the first
+   *  portion (crop) or returns one to the sea (net) — a little less yield for a
+   *  deeper, certain pilina with the presences who tend that place. */
+  | { type: 'COLLECT_JOB'; jobId: string; offer?: boolean }
   /** Begin building a tool/object (timed; one at a time). */
   | { type: 'START_CRAFT'; recipeId: string }
   /** Claim a finished craft into the bag / crafted items. */
