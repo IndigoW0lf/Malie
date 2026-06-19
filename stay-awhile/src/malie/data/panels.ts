@@ -70,11 +70,11 @@ export const PANEL_ACTIONS: PanelAction[] = [
   {
     id: 'listen_birds',
     label: 'Listen to Birds',
-    description: 'Watch the birds and let one feather fall to you.',
+    description: 'Watch the birds wheel and settle. A leaf drifts down to you.',
     panelId: 'lewa_wao',
     kind: 'observe',
-    rewards: { feather: 1 },
-    conditionalRewards: [{ guidanceId: 'iwa_birds', rewards: { feather: 1 } }],
+    rewards: { leaf: 1 },
+    conditionalRewards: [{ guidanceId: 'iwa_birds', rewards: { flower: 1 } }],
   },
   {
     id: 'gather_kukui',

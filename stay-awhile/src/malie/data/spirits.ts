@@ -10,7 +10,16 @@
  *
  * Sources noted per presence below (NPS; DLNR / Herb Kawainui Kāne).
  */
-import type { Inventory, ResourceId, SpiritId, SpiritKind } from '../types/game';
+import type { GameModifiers, Inventory, ResourceId, SpiritId, SpiritKind } from '../types/game';
+
+/** A citable reference for a presence's learning note. `url` is optional — we
+ *  only link out to stable institutional/public-domain pages, and otherwise
+ *  name the work and organization so a reader can find it. */
+export interface Source {
+  title: string;
+  organization: string;
+  url?: string;
+}
 
 export interface SpiritDef {
   id: SpiritId;
@@ -33,7 +42,10 @@ export interface SpiritDef {
   guidanceSign?: string;
   /** Short, sourced learning note. */
   learningNote: string;
+  /** Short attribution line shown under the note. */
   source: string;
+  /** Citable references, surfaced in the card's Sources drawer. */
+  sources: Source[];
   /** One line per relationship level (index 0–4) describing what it feels like. */
   effectByLevel: [string, string, string, string, string];
 }
@@ -49,11 +61,19 @@ export const SPIRITS: Record<SpiritId, SpiritDef> = {
     glyph: '🦉',
     domains: ['stars', 'night', 'guidance', 'watchfulness'],
     signs: ['clear stars', 'an owl beyond the hale', 'a guiding quiet'],
-    deepensThrough: ['Observe the stars', 'Sit with the night sky', 'Offer light or a feather'],
+    deepensThrough: ['Observe the stars', 'Sit with the night sky', 'Offer light or a woven bundle'],
     guidanceSign: 'clear_stars',
     learningNote:
       'The pueo, the Hawaiian owl, can be an ʻaumakua — an ancestral guardian. ʻAumākua are family-specific: they watch over their own descendants and may appear in forms such as the owl, the shark, or the moʻo.',
     source: 'DLNR — H. K. Kāne, “The ʻAumākua.”',
+    sources: [
+      { title: 'The ʻAumākua (ancestral guardians)', organization: 'Hawaiʻi DLNR — Herb Kawainui Kāne' },
+      {
+        title: 'Hawaiian Mythology — ʻAumakua',
+        organization: 'M. Beckwith (public domain)',
+        url: 'https://www.sacred-texts.com/pac/hm/',
+      },
+    ],
     effectByLevel: [
       '—',
       'The night feels watched over.',
@@ -77,6 +97,14 @@ export const SPIRITS: Record<SpiritId, SpiritDef> = {
     learningNote:
       'Lono is associated with rain, agriculture, fertility, music, and peace — and with the Makahiki, the season of rest, renewal, and gratitude for the land.',
     source: 'NPS — Haleakalā, “Makahiki.”',
+    sources: [
+      { title: 'Makahiki', organization: 'National Park Service — Haleakalā', url: 'https://www.nps.gov/hale/' },
+      {
+        title: 'Hawaiian Mythology — Lono',
+        organization: 'M. Beckwith (public domain)',
+        url: 'https://www.sacred-texts.com/pac/hm/',
+      },
+    ],
     effectByLevel: [
       '—',
       'You feel the rain’s rhythm.',
@@ -100,6 +128,13 @@ export const SPIRITS: Record<SpiritId, SpiritDef> = {
     learningNote:
       'Kanaloa is associated with the ocean and the deep sea, and is often invoked together with Kāne, the god of fresh water and life. The sea asks for restraint: take only what is needed.',
     source: 'Hawaiian tradition (paired with Kāne).',
+    sources: [
+      {
+        title: 'Hawaiian Mythology — Kāne and Kanaloa',
+        organization: 'M. Beckwith (public domain)',
+        url: 'https://www.sacred-texts.com/pac/hm/',
+      },
+    ],
     effectByLevel: [
       '—',
       'The sea feels near.',
@@ -124,6 +159,13 @@ export const SPIRITS: Record<SpiritId, SpiritDef> = {
     learningNote:
       'Kāne is associated with fresh water, sunlight, and life itself — the waters that make the land green. He is often invoked together with Kanaloa.',
     source: 'Hawaiian tradition (Kāne & Kanaloa).',
+    sources: [
+      {
+        title: 'Hawaiian Mythology — Kāne and Kanaloa',
+        organization: 'M. Beckwith (public domain)',
+        url: 'https://www.sacred-texts.com/pac/hm/',
+      },
+    ],
     effectByLevel: [
       '—',
       'The spring runs clear.',
@@ -146,6 +188,13 @@ export const SPIRITS: Record<SpiritId, SpiritDef> = {
     learningNote:
       'Kū has many forms (kino lau). Among them is the Kū of the upland forest and of the craftspeople who shape wood — the canoe-builders and tool-makers. This is the Kū of work and the standing forest.',
     source: 'Hawaiian tradition (Kū-pulupulu, forest & craft).',
+    sources: [
+      {
+        title: 'Hawaiian Mythology — Kū and his forms (kino lau)',
+        organization: 'M. Beckwith (public domain)',
+        url: 'https://www.sacred-texts.com/pac/hm/',
+      },
+    ],
     effectByLevel: [
       '—',
       'The forest stands with you.',
@@ -168,6 +217,13 @@ export const SPIRITS: Record<SpiritId, SpiritDef> = {
     learningNote:
       'Moʻo are water guardians — powerful ancestral spirits, often taking lizard form, who keep watch over fresh water: streams, ponds, and the loʻi.',
     source: 'Hawaiian tradition (moʻo kiaʻi wai).',
+    sources: [
+      {
+        title: 'Hawaiian Mythology — Moʻo (water guardians)',
+        organization: 'M. Beckwith (public domain)',
+        url: 'https://www.sacred-texts.com/pac/hm/',
+      },
+    ],
     effectByLevel: [
       '—',
       'The stream feels watched.',
@@ -191,6 +247,14 @@ export const SPIRITS: Record<SpiritId, SpiritDef> = {
     learningNote:
       'A manō (shark) can be an ʻaumakua — a family’s ocean guardian. ʻAumākua are family-specific; a shark ancestor watches over its descendants at sea, asking respect and restraint.',
     source: 'DLNR — H. K. Kāne, “The ʻAumākua.”',
+    sources: [
+      {
+        title: 'Sharks (manō) in Hawaiian culture',
+        organization: 'Hawaiʻi DLNR — Division of Aquatic Resources',
+        url: 'https://dlnr.hawaii.gov/sharks/',
+      },
+      { title: 'The ʻAumākua', organization: 'Hawaiʻi DLNR — Herb Kawainui Kāne' },
+    ],
     effectByLevel: [
       '—',
       'The deep feels near.',
@@ -273,7 +337,7 @@ export function craftSpiritGains(isTool: boolean): Partial<Record<SpiritId, numb
 
 /** Which presences an offering best suits (alignment gives a small bonus). */
 export const OFFERING_AFFINITY: Record<string, SpiritId[]> = {
-  feather_bundle: ['pueo_aumakua'],
+  leaf_bundle: ['pueo_aumakua'],
   star_marker: ['pueo_aumakua'],
   kukui_light: ['pueo_aumakua'],
   flower_shell_offering: ['kanaloa', 'shark_aumakua'],
@@ -315,4 +379,55 @@ export function spiritActionBonus(
 /** Pueo at Trusted+ reveals tomorrow's sign at dawn. */
 export function pueoRevealsNextSign(spirits: Record<SpiritId, { points: number }>): boolean {
   return levelForPoints(spirits.pueo_aumakua?.points ?? 0) >= 3;
+}
+
+// ─── centralized Pilina effects for the timed systems (GameModifiers) ────────
+
+function clamp(n: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, n));
+}
+
+/**
+ * The single place relationship blessings shape the timed systems. As a pilina
+ * deepens, the land and sea give a little faster and a little more — guidance,
+ * not power. Kept gentle and bounded (growth never more than halves).
+ *
+ *  • Crops — Lono (rain/growth), Kāne (fresh water), Moʻo (the loʻi's keeper)
+ *  • Crafting — Kū (the work of hands)
+ *  • Nets — Kanaloa (the deep), Manō (a family's sea guardian)
+ *  • Guidance — Pueo (the night sky) reveals tomorrow's sign
+ */
+export function deriveModifiers(spirits: Record<SpiritId, { points: number }>): GameModifiers {
+  const lvl = (id: SpiritId) => levelForPoints(spirits[id]?.points ?? 0);
+
+  let cropDur = 1;
+  let cropYield = 0;
+  if (lvl('lono') >= 2) {
+    cropDur -= 0.1;
+    cropYield += 1;
+  }
+  if (lvl('kane') >= 2) cropDur -= 0.1;
+  if (lvl('moo_aumakua') >= 2) cropDur -= 0.1;
+  if (lvl('lono') >= 3) cropYield += 1;
+
+  let craftDur = 1;
+  if (lvl('ku') >= 2) craftDur -= 0.15;
+  if (lvl('ku') >= 3) craftDur -= 0.1;
+
+  let netDur = 1;
+  let netYield = 0;
+  if (lvl('kanaloa') >= 2) netDur -= 0.1;
+  if (lvl('kanaloa') >= 3) netYield += 1;
+  if (lvl('shark_aumakua') >= 3) netYield += 1;
+  const preventEmptyNet = lvl('kanaloa') >= 4;
+
+  return {
+    cropDurationMultiplier: clamp(cropDur, 0.5, 1),
+    cropYieldBonus: cropYield,
+    craftDurationMultiplier: clamp(craftDur, 0.5, 1),
+    netDurationMultiplier: clamp(netDur, 0.5, 1),
+    netYieldBonus: netYield,
+    preventEmptyNet,
+    revealNextGuidance: lvl('pueo_aumakua') >= 3,
+  };
 }

@@ -17,8 +17,10 @@ import { MessageLog } from './components/MessageLog';
 import { SceneNav } from './components/SceneNav';
 import { BottomBar } from './components/BottomBar';
 import { GatherSheet } from './components/GatherSheet';
+import { ActionsSheet } from './components/ActionsSheet';
 import { InventoryDrawer } from './components/InventoryDrawer';
 import { CraftingPanel } from './components/CraftingPanel';
+import { plantablesForPanel } from './data/stations';
 import { PlacedItemLayer } from './components/PlacedItemLayer';
 import { PlacementOverlay } from './components/PlacementOverlay';
 import { HaleCalibrator } from './components/HaleCalibrator';
@@ -33,8 +35,8 @@ import {
 export default function MalieApp() {
   const { state, dispatch, ready } = useGame();
   const [bagOpen, setBagOpen] = useState(false);
-  /** Which bottom tray is open (Gather or Craft), or none. */
-  const [openSheet, setOpenSheet] = useState<'gather' | 'craft' | null>(null);
+  /** Which bottom tray is open (Gather, Tend, or Craft), or none. */
+  const [openSheet, setOpenSheet] = useState<'gather' | 'craft' | 'tend' | null>(null);
   /** Crafted item currently being placed (click-item → click-slot), or null. */
   const [placingId, setPlacingId] = useState<string | null>(null);
   /** DEV-only hale slot calibration overlay. */
@@ -59,8 +61,10 @@ export default function MalieApp() {
     dispatch({ type: 'SET_PANEL', panelId });
   };
 
-  const toggleSheet = (sheet: 'gather' | 'craft') =>
+  const toggleSheet = (sheet: 'gather' | 'craft' | 'tend') =>
     setOpenSheet((cur) => (cur === sheet ? null : sheet));
+
+  const hasTend = !isHale && plantablesForPanel(state.activePanel).length > 0;
 
   if (!ready) {
     return (
@@ -110,9 +114,10 @@ export default function MalieApp() {
           onBeginPlacement={setPlacingId}
           hideHaleChrome={calOpen}
         />
-        {/* The hale shows its greeting inline; the full log would crowd the scene. */}
-        {!isHale && <MessageLog messages={state.messageLog} />}
       </main>
+
+      {/* Transient toast of what just happened — auto-fades, tap to dismiss. */}
+      <MessageLog messages={state.messageLog} />
 
       {/* ‹ › arrows on the scene move between places (replaces the tab bar). */}
       {!calOpen && <SceneNav active={state.activePanel} onGo={goPanel} />}
@@ -121,14 +126,19 @@ export default function MalieApp() {
       {openSheet === 'gather' && !isHale && (
         <GatherSheet state={state} dispatch={dispatch} onClose={() => setOpenSheet(null)} />
       )}
+      {openSheet === 'tend' && hasTend && (
+        <ActionsSheet state={state} dispatch={dispatch} onClose={() => setOpenSheet(null)} />
+      )}
       {openSheet === 'craft' && (
         <CraftingPanel open state={state} dispatch={dispatch} onClose={() => setOpenSheet(null)} />
       )}
 
       <BottomBar
         isHale={isHale}
+        showTend={hasTend}
         openSheet={openSheet}
         onToggleGather={() => toggleSheet('gather')}
+        onToggleTend={() => toggleSheet('tend')}
         onToggleCraft={() => toggleSheet('craft')}
         onRest={() => {
           setOpenSheet(null);

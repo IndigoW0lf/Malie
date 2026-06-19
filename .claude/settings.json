@@ -25,7 +25,15 @@
       "Bash(curl -s -I \"http://localhost:5173/scenes/hale/default.png\")",
       "Bash(python3 -c \"from PIL import Image; im=Image.open\\('reference/Malie8.png'\\); print\\('size:', im.size, 'mode:', im.mode\\)\")",
       "Bash(python3 -m pip install --quiet Pillow)",
-      "Bash(python3 -)"
+      "Bash(python3 -)",
+      "Bash(rm -rf \"$HOME/Library/Caches/Homebrew\" \"$HOME/.npm/_cacache\" /private/tmp/claude-501/*/tasks/*.output 2>/dev/null; df -h /)",
+      "Bash(rm -rf \"$HOME/Library/Caches/com.todesktop.230313mzl4w4u92.ShipIt\" \\\\ *)",
+      "Bash(awk '{print \"disk free: \"$4}')",
+      "Bash(grep -n \"^\\\\.m-sheet\\\\b\\\\|^\\\\.m-sheet {\\\\|^\\\\.m-sheet-craft\\\\|^\\\\.m-bottombar\\\\|^\\\\.m-sheet,\" src/malie/malie.css)"
+    ],
+    "additionalDirectories": [
+      "/Users/indigowolf/Library/Caches/Homebrew",
+      "/Users/indigowolf/Library/Caches/com.todesktop.230313mzl4w4u92.ShipIt"
     ]
   }
 }

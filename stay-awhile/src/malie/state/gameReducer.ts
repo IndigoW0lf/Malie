@@ -2,13 +2,22 @@
  * Mālie — the reducer. The single place game state changes, and it changes
  * purely: every branch returns a new GameState, never mutating the old one.
  */
-import type { CraftedItem, GameAction, GameState, Inventory, ResourceId, SpiritId } from '../types/game';
+import type {
+  CraftedItem,
+  GameAction,
+  GameState,
+  Inventory,
+  ResourceId,
+  SpiritId,
+  TimedJob,
+} from '../types/game';
 import { findAction } from '../data/panels';
-import { findRecipe, isToolRecipe } from '../data/recipes';
+import { findRecipe, isToolRecipe, craftBaseMs } from '../data/recipes';
 import { getSlot } from '../data/haleSlots';
 import { allowsSlotType } from '../data/craftables';
 import { guidanceForDay } from '../data/guidance';
 import { resourceName } from '../data/resources';
+import { findPlantable, slotsForPlantable } from '../data/stations';
 import {
   SPIRITS,
   LEVEL_NAMES,
@@ -17,6 +26,7 @@ import {
   ACTION_SPIRIT_GAINS,
   craftSpiritGains,
   spiritActionBonus,
+  deriveModifiers,
   OFFERING_AFFINITY,
   OFFERING_BASE_POINTS,
   OFFERING_ALIGNED_BONUS,
@@ -27,10 +37,13 @@ import {
   addRewards,
   canAfford,
   createInitialState,
+  gameNow,
   removeItems,
+  rngNext,
   seasonForDay,
   tideForDay,
 } from './initialState';
+import { craftJob, isReady, nextReadyDelta } from './jobs';
 
 /** Cap the visible log so it never grows without bound. */
 const MAX_LOG = 40;
@@ -47,9 +60,25 @@ function describeRewards(rewards: Inventory): string {
     .join(', ');
 }
 
-/** Stable-enough unique id for a crafted instance (no RNG needed). */
+/** Unique id for a crafted instance, from the monotonic entity counter. Never
+ *  reuses an id, even after offerings remove items from the array. */
 function craftedId(recipeId: string, state: GameState): string {
-  return `${recipeId}-d${state.day}-${state.craftedItems.length}`;
+  return `${recipeId}-e${state.nextEntityId}`;
+}
+
+/** Unique id for a timed job, from the same monotonic counter. */
+function jobId(state: GameState): string {
+  return `job-e${state.nextEntityId}`;
+}
+
+/** A station's collect yield, with a yield bonus folded into its primary drop. */
+function stationYield(base: Inventory, bonus: number): Inventory {
+  const y: Inventory = { ...base };
+  if (bonus > 0) {
+    const primary = (Object.keys(base) as ResourceId[])[0];
+    if (primary) y[primary] = (y[primary] ?? 0) + bonus;
+  }
+  return y;
 }
 
 /**
@@ -68,8 +97,10 @@ function applySpiritGains(
   gains: Partial<Record<SpiritId, number>>,
   nearSpirit: SpiritId | undefined,
   certain: boolean,
-): { spirits: GameState['spirits']; messages: string[] } {
+  rng: number,
+): { spirits: GameState['spirits']; messages: string[]; rng: number } {
   let next = spirits;
+  let r = rng;
   const messages: string[] = [];
   for (const [id, base] of Object.entries(gains) as [SpiritId, number][]) {
     if (!base) continue;
@@ -79,7 +110,9 @@ function applySpiritGains(
     if (!certain) {
       const baseChance = before.discovered ? 0.5 : 0.25; // noticing is harder
       const chance = Math.min(0.9, baseChance + (isNear ? 0.25 : 0) + before.attention * 0.1);
-      if (Math.random() >= chance) {
+      const [roll, nr] = rngNext(r);
+      r = nr;
+      if (roll >= chance) {
         // A near-miss: nothing stirs, but attention builds for next time.
         next = { ...next, [id]: { ...before, attention: before.attention + 1 } };
         continue;
@@ -94,13 +127,17 @@ function applySpiritGains(
       messages.push(`Your pilina with ${SPIRITS[id].name} deepens — ${LEVEL_NAMES[levelForPoints(points)]}.`);
     }
   }
-  return { spirits: next, messages };
+  return { spirits: next, messages, rng: r };
 }
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'HYDRATE':
       return action.state;
+
+    case 'SET_TIME_OFFSET':
+      if (state.timeOffsetMs === action.offsetMs) return state;
+      return { ...state, timeOffsetMs: action.offsetMs };
 
     case 'RESET_GAME':
       return createInitialState();
@@ -136,11 +173,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       // Restraint is a deliberate gift, so it always lands; passive acts are a
       // chance to be noticed.
       const gains = { ...ACTION_SPIRIT_GAINS[def.id], ...def.spiritGain };
-      const { spirits, messages: spiritMsgs } = applySpiritGains(
+      const { spirits, messages: spiritMsgs, rng } = applySpiritGains(
         state.spirits,
         gains,
         nearSpiritFor(state.guidanceId),
         def.kind === 'restraint',
+        state.rng,
       );
 
       const gainedText = describeRewards(gained);
@@ -154,6 +192,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         inventory,
         actionsUsedToday: [...state.actionsUsedToday, def.id],
         spirits,
+        rng,
         messageLog: pushLog(state.messageLog, ...spiritMsgs, line),
       };
     }
@@ -166,17 +205,19 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       const aligned = (OFFERING_AFFINITY[item.recipeId] ?? []).includes(action.spiritId);
       const pts = OFFERING_BASE_POINTS + (aligned ? OFFERING_ALIGNED_BONUS : 0);
-      const { spirits, messages } = applySpiritGains(
+      const { spirits, messages, rng } = applySpiritGains(
         state.spirits,
         { [action.spiritId]: pts },
         undefined,
         true, // an offering is a deliberate gift — it always lands
+        state.rng,
       );
 
       return {
         ...state,
         craftedItems: state.craftedItems.filter((c) => c.id !== item.id),
         spirits,
+        rng,
         messageLog: pushLog(
           state.messageLog,
           ...messages,
@@ -214,11 +255,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const inventory = removeItems(state.inventory, recipe.ingredients);
 
       // Making things honors Kū (the work of hands), tools most of all.
-      const { spirits, messages: kuMsgs } = applySpiritGains(
+      const { spirits, messages: kuMsgs, rng } = applySpiritGains(
         state.spirits,
         craftSpiritGains(!!recipe.result.tool),
         nearSpiritFor(state.guidanceId),
         false, // Kū may or may not notice a given piece of work
+        state.rng,
       );
 
       // Material craft: yields resources into the bag, makes no kept item.
@@ -227,6 +269,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           ...state,
           inventory: addRewards(inventory, recipe.yields),
           spirits,
+          rng,
           messageLog: pushLog(
             state.messageLog,
             ...kuMsgs,
@@ -235,7 +278,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         };
       }
 
-      // Object / tool craft: produce a kept item.
+      // Object / tool craft: produce a kept item with a stable, unique id.
       const item: CraftedItem = {
         id: craftedId(recipe.id, state),
         recipeId: recipe.id,
@@ -251,7 +294,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         inventory,
         craftedItems: [...state.craftedItems, item],
+        nextEntityId: state.nextEntityId + 1,
         spirits,
+        rng,
         messageLog: pushLog(state.messageLog, ...kuMsgs, line),
       };
     }
@@ -272,6 +317,202 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ),
         placedItems: [...state.placedItems, { craftedItemId: item.id, slotId: slot.id }],
         messageLog: pushLog(state.messageLog, `You set the ${item.name} in the hale.`),
+      };
+    }
+
+    // ─── timed jobs ──────────────────────────────────────────────────────────
+
+    case 'START_JOB': {
+      const p = findPlantable(action.plantableId);
+      if (!p) return state;
+      if (p.requiresCraft && !state.craftedItems.some((c) => c.recipeId === p.requiresCraft)) {
+        return state; // needs a crafted tool (e.g. the fishing net)
+      }
+      if (p.cost && !canAfford(state.inventory, p.cost)) return state;
+
+      // Claim the next free slot in this plantable's pool.
+      const taken = new Set(state.jobs.map((j) => j.slotId));
+      const slot = slotsForPlantable(p).find((s) => !taken.has(s.id));
+      if (!slot) return state; // pool is full
+
+      const mods = deriveModifiers(state.spirits);
+      const now = gameNow(state);
+      const durMult = p.kind === 'crop' ? mods.cropDurationMultiplier : mods.netDurationMultiplier;
+      const bonus = p.kind === 'crop' ? mods.cropYieldBonus : mods.netYieldBonus;
+
+      const job: TimedJob = {
+        id: jobId(state),
+        kind: p.kind,
+        definitionId: p.id,
+        slotId: slot.id,
+        startedAt: now,
+        readyAt: now + Math.round(p.durationMs * durMult),
+        yield: stationYield(p.baseYield, bonus),
+        spiritGain: p.spiritGain,
+      };
+
+      return {
+        ...state,
+        inventory: p.cost ? removeItems(state.inventory, p.cost) : state.inventory,
+        jobs: [...state.jobs, job],
+        nextEntityId: state.nextEntityId + 1,
+        messageLog: pushLog(
+          state.messageLog,
+          p.kind === 'crop' ? `You plant ${p.name}.` : `You set the ${p.name}.`,
+        ),
+      };
+    }
+
+    case 'TEND_JOB': {
+      const job = state.jobs.find((j) => j.id === action.jobId);
+      if (!job || job.kind !== 'crop' || job.tended) return state;
+      const p = findPlantable(job.definitionId);
+
+      // A tending gesture: a little more at harvest, and a deliberate (certain)
+      // bit of pilina now.
+      const primary = p ? (Object.keys(p.baseYield) as ResourceId[])[0] : undefined;
+      const yld = primary ? { ...job.yield, [primary]: (job.yield[primary] ?? 0) + 1 } : job.yield;
+
+      const { spirits, messages, rng } = applySpiritGains(
+        state.spirits,
+        job.spiritGain ?? {},
+        nearSpiritFor(state.guidanceId),
+        true,
+        state.rng,
+      );
+
+      return {
+        ...state,
+        jobs: state.jobs.map((j) => (j.id === job.id ? { ...j, tended: true, yield: yld } : j)),
+        spirits,
+        rng,
+        messageLog: pushLog(state.messageLog, ...messages, `You tend the ${p?.name ?? 'crop'}.`),
+      };
+    }
+
+    case 'COLLECT_JOB': {
+      const job = state.jobs.find((j) => j.id === action.jobId);
+      if (!job || job.kind === 'craft') return state;
+      if (!isReady(job, gameNow(state))) return state;
+      const p = findPlantable(job.definitionId);
+
+      const { spirits, messages, rng } = applySpiritGains(
+        state.spirits,
+        job.spiritGain ?? {},
+        nearSpiritFor(state.guidanceId),
+        true, // tending the land/sea is deliberate — it lands
+        state.rng,
+      );
+
+      return {
+        ...state,
+        inventory: addRewards(state.inventory, job.yield),
+        jobs: state.jobs.filter((j) => j.id !== job.id),
+        spirits,
+        rng,
+        messageLog: pushLog(
+          state.messageLog,
+          ...messages,
+          `${job.kind === 'crop' ? 'You harvest' : 'You haul in'} the ${p?.name ?? ''} — ${describeRewards(job.yield)}.`,
+        ),
+      };
+    }
+
+    case 'START_CRAFT': {
+      const recipe = findRecipe(action.recipeId);
+      if (!recipe) return state;
+      if (recipe.yields) return state; // materials are prepared instantly (CRAFT)
+      if (craftJob(state.jobs)) return state; // one build at a time
+      if (recipe.result.tool && state.craftedItems.some((c) => c.recipeId === recipe.id)) {
+        return state; // tool already owned
+      }
+      if (!canAfford(state.inventory, recipe.ingredients)) return state;
+
+      const when = recipe.availableWhen;
+      if (when) {
+        if (when.tides && !when.tides.includes(state.tide)) return state;
+        if (when.seasons && !when.seasons.includes(state.season)) return state;
+        if (when.signs && !when.signs.includes(state.guidanceId)) return state;
+      }
+      if (recipe.requiresTools) {
+        const owned = new Set(
+          state.craftedItems.filter((c) => isToolRecipe(c.recipeId)).map((c) => c.recipeId),
+        );
+        if (!recipe.requiresTools.every((t) => owned.has(t))) return state;
+      }
+
+      const mods = deriveModifiers(state.spirits);
+      const now = gameNow(state);
+      const job: TimedJob = {
+        id: jobId(state),
+        kind: 'craft',
+        definitionId: recipe.id,
+        startedAt: now,
+        readyAt: now + Math.round(craftBaseMs(recipe) * mods.craftDurationMultiplier),
+        yield: {},
+      };
+
+      return {
+        ...state,
+        inventory: removeItems(state.inventory, recipe.ingredients),
+        jobs: [...state.jobs, job],
+        nextEntityId: state.nextEntityId + 1,
+        messageLog: pushLog(state.messageLog, `You begin making the ${recipe.name}.`),
+      };
+    }
+
+    case 'CLAIM_CRAFT': {
+      const job = state.jobs.find((j) => j.id === action.jobId);
+      if (!job || job.kind !== 'craft') return state;
+      if (!isReady(job, gameNow(state))) return state;
+      const recipe = findRecipe(job.definitionId);
+      if (!recipe) return { ...state, jobs: state.jobs.filter((j) => j.id !== job.id) };
+
+      // Kū may notice the finished work (a chance, like instant crafting).
+      const { spirits, messages: kuMsgs, rng } = applySpiritGains(
+        state.spirits,
+        craftSpiritGains(!!recipe.result.tool),
+        nearSpiritFor(state.guidanceId),
+        false,
+        state.rng,
+      );
+
+      const item: CraftedItem = {
+        id: craftedId(recipe.id, state),
+        recipeId: recipe.id,
+        name: recipe.name,
+        placed: false,
+        createdDay: state.day,
+      };
+      const line = recipe.result.tool
+        ? `The ${recipe.name} is finished. A tool to keep.`
+        : `The ${recipe.name} is finished.`;
+
+      return {
+        ...state,
+        craftedItems: [...state.craftedItems, item],
+        jobs: state.jobs.filter((j) => j.id !== job.id),
+        nextEntityId: state.nextEntityId + 1,
+        spirits,
+        rng,
+        messageLog: pushLog(state.messageLog, ...kuMsgs, line),
+      };
+    }
+
+    case 'REST_UNTIL_NEXT_READY': {
+      const delta = nextReadyDelta(state);
+      if (delta == null || delta <= 0) return state;
+      // Pull every job back by the same delta so the soonest becomes ready now;
+      // relative progress between jobs is preserved.
+      const jobs = state.jobs.map((j) => ({
+        ...j,
+        startedAt: j.startedAt - delta,
+        readyAt: j.readyAt - delta,
+      }));
+      return {
+        ...state,
+        jobs,
+        messageLog: pushLog(state.messageLog, 'You sit a while. Something is ready.'),
       };
     }
 

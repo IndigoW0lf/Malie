@@ -57,7 +57,27 @@ export function SpiritCard({ spiritId, state, dispatch, onBack }: Props) {
         </dl>
 
         <p className="m-card-note">{def.learningNote}</p>
-        <p className="m-card-source">— {def.source}</p>
+        <details className="m-card-sources">
+          <summary>Sources — {def.source}</summary>
+          <ul className="m-source-list">
+            {def.sources.map((s, i) => (
+              <li key={i} className="m-source-row">
+                {s.url ? (
+                  <a href={s.url} target="_blank" rel="noopener noreferrer">
+                    {s.title}
+                  </a>
+                ) : (
+                  <span>{s.title}</span>
+                )}
+                <span className="m-source-org"> — {s.organization}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="m-source-foot">
+            A respectful homage. For anything beyond this jam, a Hawaiian cultural reviewer should
+            pass on this text.
+          </p>
+        </details>
 
         <div className="m-card-offer">
           <h4>Offer</h4>

@@ -115,10 +115,10 @@ export const RECIPES: Recipe[] = [
     id: 'fishing_net',
     name: 'Fishing Net',
     category: 'fish',
-    description: 'A small net for gentle shoreline fishing.',
+    description: 'A small net for gentle shoreline fishing. Kept, and used to set nets.',
     ingredients: { fiber: 3, shell: 1 },
     requiresTools: ['net_needle'],
-    result: { usable: true },
+    result: { tool: true },
   },
   {
     id: 'fish_basket',
@@ -161,26 +161,26 @@ export const RECIPES: Recipe[] = [
     id: 'water_bowl',
     name: 'Water Bowl',
     category: 'relationship',
-    description: 'Still water and a piece of coral.',
-    ingredients: { gourd: 1, coral: 1 },
+    description: 'Fresh water held in a wide ipu vessel.',
+    ingredients: { gourd: 1 },
     result: { placeable: true, offering: true },
   },
   {
     id: 'wind_chime',
-    name: 'Wind Chime',
+    name: 'Shell Hanging',
     category: 'relationship',
-    description: 'Shells strung on cord that sing in the breeze.',
+    description: 'Shells and cord hung where the breeze can move them.',
     ingredients: { shell: 3, cordage: 1 },
     result: { placeable: true },
   },
 
   // ─── Guidance ──────────────────────────────────────────────────────────────
   {
-    id: 'feather_bundle',
-    name: 'Feather Bundle',
+    id: 'leaf_bundle',
+    name: 'Lā‘ī Bundle',
     category: 'guidance',
-    description: 'Gathered feathers, bound and kept.',
-    ingredients: { feather: 2, fiber: 1 },
+    description: 'Tī leaves gathered, bound, and kept — a quiet token.',
+    ingredients: { leaf: 2, fiber: 1 },
     result: { placeable: true, offering: true },
   },
   {
@@ -259,7 +259,7 @@ export const RECIPE_GLYPHS: Record<string, string> = {
   shell_bowl: '🥣',
   water_bowl: '🥛',
   wind_chime: '🎐',
-  feather_bundle: '🪶',
+  leaf_bundle: '🌿',
   star_marker: '🌟',
   carved_token: '🗿',
   kukui_light: '🪔',
@@ -284,4 +284,19 @@ export function findRecipe(recipeId: string): Recipe | undefined {
 /** True when a recipe produces a lasting tool. */
 export function isToolRecipe(recipeId: string): boolean {
   return RECIPES_BY_ID[recipeId]?.result.tool === true;
+}
+
+/** Base build time for a timed craft, before Kū's blessing. Tools take longer. */
+export const CRAFT_BASE_MS = 2 * 60_000;
+export const TOOL_BASE_MS = 3 * 60_000;
+
+/** Base build time (ms) for a recipe before Pilina modifiers. */
+export function craftBaseMs(recipe: Recipe): number {
+  return recipe.result.tool ? TOOL_BASE_MS : CRAFT_BASE_MS;
+}
+
+/** Materials (yield a resource into the bag) are prepared instantly; tools and
+ *  objects are built over time. */
+export function isTimedCraft(recipe: Recipe): boolean {
+  return !recipe.yields;
 }

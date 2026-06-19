@@ -9,7 +9,6 @@ import type { Resource, ResourceId } from '../types/game';
 export const RESOURCES: Record<ResourceId, Resource> = {
   flower: { id: 'flower', name: 'Flower', glyph: '🌺', note: 'A few blooms, no more.' },
   leaf: { id: 'leaf', name: 'Leaf', glyph: '🌿', note: 'Green and pliant.' },
-  feather: { id: 'feather', name: 'Feather', glyph: '🪶', note: 'Left on the wind.' },
   star_sign: { id: 'star_sign', name: 'Star Sign', glyph: '✨', note: 'A reading of the sky.' },
   smooth_stone: { id: 'smooth_stone', name: 'Smooth Stone', glyph: '🪨', note: 'Worn kind by water.' },
   kalo: { id: 'kalo', name: 'Kalo', glyph: '🍠', note: 'Taro from the loʻi.' },

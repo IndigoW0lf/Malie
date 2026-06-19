@@ -57,10 +57,10 @@ const SEEDS: CraftableSeed[] = [
     category: 'relationship',
     allowedSlots: ['shelf', 'cubby', 'floor'],
   },
-  { id: 'wind_chime', name: 'Wind Chime', category: 'relationship', allowedSlots: ['hanging', 'wall'] },
+  { id: 'wind_chime', name: 'Shell Hanging', category: 'relationship', allowedSlots: ['hanging', 'wall'] },
   {
-    id: 'feather_bundle',
-    name: 'Feather Bundle',
+    id: 'leaf_bundle',
+    name: 'Lā‘ī Bundle',
     category: 'guidance',
     allowedSlots: ['wall', 'hanging', 'shelf'],
   },

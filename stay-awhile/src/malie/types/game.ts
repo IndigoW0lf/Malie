@@ -21,7 +21,6 @@ export type PanelId = 'lewa_wao' | 'kula_kahawai' | 'kahakai_moana' | 'hale';
 export type ResourceId =
   | 'flower'
   | 'leaf'
-  | 'feather'
   | 'star_sign'
   | 'smooth_stone'
   | 'kalo'
@@ -190,6 +189,52 @@ export interface PlacedItem {
   slotId: string;
 }
 
+// ─── Timed jobs (real-time growth / fishing / crafting) ──────────────────────
+
+/** What a running job is: a crop growing, a net soaking, or a craft building. */
+export type JobKind = 'crop' | 'net' | 'craft';
+
+/**
+ * A unit of work that takes real time. Readiness is *derived* from the clock —
+ * we store `startedAt`/`readyAt` (in game-clock ms, see gameNow) and never a
+ * "stage", so progress survives reloads and offline time with no bookkeeping.
+ */
+export interface TimedJob {
+  /** Unique instance id (monotonic, like crafted items). */
+  id: string;
+  kind: JobKind;
+  /** The station id (crop/net) or recipe id (craft) this job runs. */
+  definitionId: string;
+  /** For crop/net: the station slot it occupies. Undefined for craft. */
+  slotId?: string;
+  /** Game-clock ms when the job started and when it becomes ready. */
+  startedAt: number;
+  readyAt: number;
+  /** What collecting drops into the bag (snapshotted at start, with modifiers). */
+  yield: Inventory;
+  /** Pilina points granted when the job is collected. */
+  spiritGain?: Partial<Record<SpiritId, number>>;
+  /** Crop only: a one-time tend has been given (adds a little yield + pilina). */
+  tended?: boolean;
+}
+
+/**
+ * Centralized Pilina effects for the timed systems. Derived from `spirits` (see
+ * deriveModifiers) so relationship blessings live in ONE place instead of being
+ * scattered across actions. Multipliers <1 mean "faster"; bonuses are additive.
+ */
+export interface GameModifiers {
+  cropDurationMultiplier: number;
+  cropYieldBonus: number;
+  craftDurationMultiplier: number;
+  netDurationMultiplier: number;
+  netYieldBonus: number;
+  /** Kanaloa, deep in pilina: a set net always brings something home. */
+  preventEmptyNet: boolean;
+  /** Pueo, trusted: tomorrow's sign is shown at dawn. */
+  revealNextGuidance: boolean;
+}
+
 /** A day's reading of the sky/sea — guidance that colors the day. */
 export interface Guidance {
   id: string;
@@ -236,8 +281,18 @@ export interface GameState {
   actionsUsedToday: string[];
   /** Pilina relationships, keyed by presence. */
   spirits: Record<SpiritId, SpiritRelationship>;
+  /** Running timed jobs — crops growing, nets soaking, crafts building. */
+  jobs: TimedJob[];
   /** Newest-first log of gentle messages. */
   messageLog: string[];
+
+  // ─── spine ────────────────────────────────────────────────────────────────
+  /** Seeded PRNG state. Keeps the reducer pure and randomness reproducible. */
+  rng: number;
+  /** Monotonic counter for unique entity ids (never reuses, unlike array length). */
+  nextEntityId: number;
+  /** ms to add to client `Date.now()` to project server time (anti-clock-cheat). */
+  timeOffsetMs: number;
 }
 
 /** Everything the reducer understands. */
@@ -247,6 +302,20 @@ export type GameAction =
   | { type: 'CRAFT'; recipeId: string }
   | { type: 'OFFER_TO_SPIRIT'; spiritId: SpiritId; craftedItemId: string }
   | { type: 'PLACE_ITEM'; craftedItemId: string; slotId: string }
+  // ─── timed jobs ────────────────────────────────────────────────────────────
+  /** Plant a crop / set a net — claims the next free slot in its pool. */
+  | { type: 'START_JOB'; plantableId: string }
+  /** A one-time tending gesture on a growing crop. */
+  | { type: 'TEND_JOB'; jobId: string }
+  /** Harvest a crop / haul in a net once ready. */
+  | { type: 'COLLECT_JOB'; jobId: string }
+  /** Begin building a tool/object (timed; one at a time). */
+  | { type: 'START_CRAFT'; recipeId: string }
+  /** Claim a finished craft into the bag / crafted items. */
+  | { type: 'CLAIM_CRAFT'; jobId: string }
+  /** Pull every running job forward to the moment the soonest one is ready. */
+  | { type: 'REST_UNTIL_NEXT_READY' }
   | { type: 'END_DAY' }
+  | { type: 'SET_TIME_OFFSET'; offsetMs: number }
   | { type: 'RESET_GAME' }
   | { type: 'HYDRATE'; state: GameState };

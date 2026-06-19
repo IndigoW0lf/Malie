@@ -25,9 +25,34 @@ export function seasonForDay(day: number): Season {
   return SEASON_CYCLE[idx]!;
 }
 
-export function createInitialState(): GameState {
+/** Default PRNG seed for a fresh state; useGame reseeds real new games. */
+export const DEFAULT_SEED = 0x9e3779b9;
+
+/**
+ * mulberry32 — a small, fast, deterministic PRNG. Returns the next value in
+ * [0, 1) and the next seed. The game threads the seed through GameState so the
+ * reducer stays pure and "luck" is reproducible from a save.
+ */
+export function rngNext(seed: number): [value: number, next: number] {
+  let t = (seed + 0x6d2b79f5) | 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  const value = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  return [value, t >>> 0];
+}
+
+/** The canonical "now" for the game, projected to server time. Anchored once on
+ *  load (see useGame); falls back to the client clock until then. */
+export function gameNow(state: Pick<GameState, 'timeOffsetMs'>): number {
+  return Date.now() + state.timeOffsetMs;
+}
+
+export function createInitialState(seed: number = DEFAULT_SEED): GameState {
   const day = 1;
   return {
+    rng: seed >>> 0,
+    nextEntityId: 1,
+    timeOffsetMs: 0,
     day,
     season: seasonForDay(day),
     tide: tideForDay(day),
@@ -46,6 +71,7 @@ export function createInitialState(): GameState {
       moo_aumakua: { points: 0, discovered: false, attention: 0 },
       shark_aumakua: { points: 0, discovered: false, attention: 0 },
     },
+    jobs: [],
     messageLog: [greetingForDay(day)],
   };
 }
