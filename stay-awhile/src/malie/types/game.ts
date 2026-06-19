@@ -73,10 +73,14 @@ export interface PanelAction {
   label: string;
   description: string;
   panelId: PanelId;
-  /** A verb hint used purely for the button's small icon/tone. */
-  kind: 'observe' | 'gather' | 'tend' | 'fish';
+  /** A verb hint used for the button's tone. 'restraint' = giving, not taking. */
+  kind: 'observe' | 'gather' | 'tend' | 'fish' | 'restraint';
   rewards?: Inventory;
   conditionalRewards?: ConditionalReward[];
+  /** Resources this action gives back / spends (e.g. returning a fish). */
+  cost?: Inventory;
+  /** Pilina points this action offers to presences. */
+  spiritGain?: Partial<Record<SpiritId, number>>;
 }
 
 /** A part of the ecosystem the player can visit. */
@@ -194,6 +198,30 @@ export interface Guidance {
   effectDescription: string;
 }
 
+// ─── Pilina (relationships with akua / ʻaumākua) ─────────────────────────────
+
+/** The presences the player can come into relationship with. */
+export type SpiritId =
+  | 'lono'
+  | 'kanaloa'
+  | 'pueo_aumakua'
+  | 'kane'
+  | 'ku'
+  | 'moo_aumakua'
+  | 'shark_aumakua';
+
+export type SpiritKind = 'akua' | 'aumakua';
+
+/** The player's relationship with one presence. `points` drives the level;
+ *  `discovered` flips true the first time the presence is noticed. `attention`
+ *  is hidden pity — it rises on a near-miss and lifts the next chance, so luck
+ *  never fully stalls discovery. */
+export interface SpiritRelationship {
+  points: number;
+  discovered: boolean;
+  attention: number;
+}
+
 /** The whole game, in one serializable object. */
 export interface GameState {
   day: number;
@@ -206,6 +234,8 @@ export interface GameState {
   placedItems: PlacedItem[];
   /** Panel-action ids already done today. Reset each dawn. */
   actionsUsedToday: string[];
+  /** Pilina relationships, keyed by presence. */
+  spirits: Record<SpiritId, SpiritRelationship>;
   /** Newest-first log of gentle messages. */
   messageLog: string[];
 }
@@ -215,6 +245,7 @@ export type GameAction =
   | { type: 'SET_PANEL'; panelId: PanelId }
   | { type: 'PERFORM_PANEL_ACTION'; actionId: string }
   | { type: 'CRAFT'; recipeId: string }
+  | { type: 'OFFER_TO_SPIRIT'; spiritId: SpiritId; craftedItemId: string }
   | { type: 'PLACE_ITEM'; craftedItemId: string; slotId: string }
   | { type: 'END_DAY' }
   | { type: 'RESET_GAME' }

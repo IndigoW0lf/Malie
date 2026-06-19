@@ -19,10 +19,11 @@ const TIDE_LABEL: Record<GameState['tide'], string> = {
 interface Props {
   state: GameState;
   onToggleInventory: () => void;
+  onOpenPilina: () => void;
   inventoryCount: number;
 }
 
-export function TopStatusBar({ state, onToggleInventory, inventoryCount }: Props) {
+export function TopStatusBar({ state, onToggleInventory, onOpenPilina, inventoryCount }: Props) {
   const sign = GUIDANCE_BY_ID[state.guidanceId];
   return (
     <header className="m-statusbar">
@@ -46,9 +47,14 @@ export function TopStatusBar({ state, onToggleInventory, inventoryCount }: Props
           <span className="m-status-value">{sign?.name ?? '—'}</span>
         </span>
       </div>
-      <button className="m-inventory-toggle" onClick={onToggleInventory}>
-        🧺 Bag <span className="m-pill">{inventoryCount}</span>
-      </button>
+      <div className="m-status-actions">
+        <button className="m-inventory-toggle" onClick={onOpenPilina}>
+          ✦ Pilina
+        </button>
+        <button className="m-inventory-toggle" onClick={onToggleInventory}>
+          🧺 Bag <span className="m-pill">{inventoryCount}</span>
+        </button>
+      </div>
     </header>
   );
 }

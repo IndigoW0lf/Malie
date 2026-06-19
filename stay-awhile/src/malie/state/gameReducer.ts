@@ -2,13 +2,26 @@
  * Mālie — the reducer. The single place game state changes, and it changes
  * purely: every branch returns a new GameState, never mutating the old one.
  */
-import type { CraftedItem, GameAction, GameState, Inventory, ResourceId } from '../types/game';
+import type { CraftedItem, GameAction, GameState, Inventory, ResourceId, SpiritId } from '../types/game';
 import { findAction } from '../data/panels';
 import { findRecipe, isToolRecipe } from '../data/recipes';
 import { getSlot } from '../data/haleSlots';
 import { allowsSlotType } from '../data/craftables';
 import { guidanceForDay } from '../data/guidance';
 import { resourceName } from '../data/resources';
+import {
+  SPIRITS,
+  LEVEL_NAMES,
+  levelForPoints,
+  nearSpiritFor,
+  ACTION_SPIRIT_GAINS,
+  craftSpiritGains,
+  spiritActionBonus,
+  OFFERING_AFFINITY,
+  OFFERING_BASE_POINTS,
+  OFFERING_ALIGNED_BONUS,
+  pueoRevealsNextSign,
+} from '../data/spirits';
 import { dawnMessages } from '../data/greetings';
 import {
   addRewards,
@@ -39,6 +52,51 @@ function craftedId(recipeId: string, state: GameState): string {
   return `${recipeId}-d${state.day}-${state.craftedItems.length}`;
 }
 
+/**
+ * Apply Pilina point gains to the spirits map. Adds a +1 alignment bonus when a
+ * gained presence is the one near today, and returns gentle messages for first
+ * discovery and level-ups.
+ *
+ * `certain` gains (deliberate gifts — restraint, offerings) always land.
+ * Otherwise a gain is a *chance* to be noticed: you don't always see a presence
+ * in a passing act. A near-miss raises that presence's hidden `attention`, which
+ * lifts the next chance, so luck never fully stalls discovery. Acting on a
+ * presence's sign-day improves the odds.
+ */
+function applySpiritGains(
+  spirits: GameState['spirits'],
+  gains: Partial<Record<SpiritId, number>>,
+  nearSpirit: SpiritId | undefined,
+  certain: boolean,
+): { spirits: GameState['spirits']; messages: string[] } {
+  let next = spirits;
+  const messages: string[] = [];
+  for (const [id, base] of Object.entries(gains) as [SpiritId, number][]) {
+    if (!base) continue;
+    const before = next[id];
+    const isNear = id === nearSpirit;
+
+    if (!certain) {
+      const baseChance = before.discovered ? 0.5 : 0.25; // noticing is harder
+      const chance = Math.min(0.9, baseChance + (isNear ? 0.25 : 0) + before.attention * 0.1);
+      if (Math.random() >= chance) {
+        // A near-miss: nothing stirs, but attention builds for next time.
+        next = { ...next, [id]: { ...before, attention: before.attention + 1 } };
+        continue;
+      }
+    }
+
+    const points = before.points + base + (isNear ? 1 : 0);
+    next = { ...next, [id]: { points, discovered: true, attention: 0 } };
+    if (!before.discovered) {
+      messages.push(`You begin to notice ${SPIRITS[id].name}.`);
+    } else if (levelForPoints(points) > levelForPoints(before.points)) {
+      messages.push(`Your pilina with ${SPIRITS[id].name} deepens — ${LEVEL_NAMES[levelForPoints(points)]}.`);
+    }
+  }
+  return { spirits: next, messages };
+}
+
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'HYDRATE':
@@ -56,8 +114,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (!def) return state;
       // One gesture per action per day.
       if (state.actionsUsedToday.includes(def.id)) return state;
+      // Restraint that gives something back (return a fish) needs it in hand.
+      if (def.cost && !canAfford(state.inventory, def.cost)) return state;
 
-      // Base rewards plus any that the day's sign or tide unlocks.
+      // Base rewards, plus what the day's sign/tide unlocks, plus a relationship
+      // blessing (a deepened presence makes its domain a little more generous).
       let gained: Inventory = { ...(def.rewards ?? {}) };
       for (const cond of def.conditionalRewards ?? []) {
         const signMatches = cond.guidanceId == null || cond.guidanceId === state.guidanceId;
@@ -66,17 +127,61 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           gained = addRewards(gained, cond.rewards);
         }
       }
+      gained = addRewards(gained, spiritActionBonus(def.id, state.spirits));
+
+      let inventory = addRewards(state.inventory, gained);
+      if (def.cost) inventory = removeItems(inventory, def.cost);
+
+      // Pilina points (action's own gains + table gains), with alignment to today.
+      // Restraint is a deliberate gift, so it always lands; passive acts are a
+      // chance to be noticed.
+      const gains = { ...ACTION_SPIRIT_GAINS[def.id], ...def.spiritGain };
+      const { spirits, messages: spiritMsgs } = applySpiritGains(
+        state.spirits,
+        gains,
+        nearSpiritFor(state.guidanceId),
+        def.kind === 'restraint',
+      );
 
       const gainedText = describeRewards(gained);
-      const line = gainedText
-        ? `${def.label}. You gather ${gainedText}.`
-        : `${def.label}.`;
+      const line =
+        def.kind !== 'restraint' && gainedText
+          ? `${def.label}. You gather ${gainedText}.`
+          : `${def.label}.`;
 
       return {
         ...state,
-        inventory: addRewards(state.inventory, gained),
+        inventory,
         actionsUsedToday: [...state.actionsUsedToday, def.id],
-        messageLog: pushLog(state.messageLog, line),
+        spirits,
+        messageLog: pushLog(state.messageLog, ...spiritMsgs, line),
+      };
+    }
+
+    case 'OFFER_TO_SPIRIT': {
+      const item = state.craftedItems.find((c) => c.id === action.craftedItemId);
+      if (!item || item.placed) return state;
+      const recipe = findRecipe(item.recipeId);
+      if (!recipe?.result.offering) return state; // only offerings may be offered
+
+      const aligned = (OFFERING_AFFINITY[item.recipeId] ?? []).includes(action.spiritId);
+      const pts = OFFERING_BASE_POINTS + (aligned ? OFFERING_ALIGNED_BONUS : 0);
+      const { spirits, messages } = applySpiritGains(
+        state.spirits,
+        { [action.spiritId]: pts },
+        undefined,
+        true, // an offering is a deliberate gift — it always lands
+      );
+
+      return {
+        ...state,
+        craftedItems: state.craftedItems.filter((c) => c.id !== item.id),
+        spirits,
+        messageLog: pushLog(
+          state.messageLog,
+          ...messages,
+          `You offer the ${item.name} to ${SPIRITS[action.spiritId].name}. The pilina deepens.`,
+        ),
       };
     }
 
@@ -108,12 +213,25 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       const inventory = removeItems(state.inventory, recipe.ingredients);
 
+      // Making things honors Kū (the work of hands), tools most of all.
+      const { spirits, messages: kuMsgs } = applySpiritGains(
+        state.spirits,
+        craftSpiritGains(!!recipe.result.tool),
+        nearSpiritFor(state.guidanceId),
+        false, // Kū may or may not notice a given piece of work
+      );
+
       // Material craft: yields resources into the bag, makes no kept item.
       if (recipe.yields) {
         return {
           ...state,
           inventory: addRewards(inventory, recipe.yields),
-          messageLog: pushLog(state.messageLog, `You prepare ${describeRewards(recipe.yields)}.`),
+          spirits,
+          messageLog: pushLog(
+            state.messageLog,
+            ...kuMsgs,
+            `You prepare ${describeRewards(recipe.yields)}.`,
+          ),
         };
       }
 
@@ -133,7 +251,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         inventory,
         craftedItems: [...state.craftedItems, item],
-        messageLog: pushLog(state.messageLog, line),
+        spirits,
+        messageLog: pushLog(state.messageLog, ...kuMsgs, line),
       };
     }
 
@@ -164,6 +283,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const dawn = dawnMessages(day, state);
       const lines = [...dawn];
       if (seasonTurned) lines.push(`The season turns toward ${season}.`);
+
+      // Who is near today, if the player has come to know them.
+      const nearId = nearSpiritFor(guidanceForDay(day).id);
+      if (nearId && state.spirits[nearId].discovered) {
+        lines.push(`${SPIRITS[nearId].name} is near.`);
+      }
+      // Pueo, once Trusted, shows tomorrow's sign.
+      if (pueoRevealsNextSign(state.spirits)) {
+        lines.push(`The owl shows the way — tomorrow, ${guidanceForDay(day + 1).name.toLowerCase()}.`);
+      }
 
       return {
         ...state,

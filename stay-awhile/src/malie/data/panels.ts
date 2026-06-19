@@ -84,6 +84,14 @@ export const PANEL_ACTIONS: PanelAction[] = [
     kind: 'gather',
     rewards: { kukui: 1, leaf: 1 },
   },
+  {
+    id: 'sit_with_sky',
+    label: 'Sit with the Night Sky',
+    description: 'Take nothing. Simply watch, and be watched over.',
+    panelId: 'lewa_wao',
+    kind: 'restraint',
+    spiritGain: { pueo_aumakua: 2 },
+  },
 
   // ─── Kula / Kahawai ────────────────────────────────────────────────────────
   {
@@ -112,6 +120,14 @@ export const PANEL_ACTIONS: PanelAction[] = [
     kind: 'gather',
     rewards: { wood: 1, gourd: 1, wauke: 1 },
   },
+  {
+    id: 'rest_loi',
+    label: 'Let the Loʻi Rest',
+    description: 'Leave the kalo undisturbed today. The land keeps its own time.',
+    panelId: 'kula_kahawai',
+    kind: 'restraint',
+    spiritGain: { lono: 2, moo_aumakua: 1 },
+  },
 
   // ─── Kahakai / Moana ───────────────────────────────────────────────────────
   {
@@ -139,6 +155,15 @@ export const PANEL_ACTIONS: PanelAction[] = [
     panelId: 'kahakai_moana',
     kind: 'gather',
     rewards: { shell: 1, driftwood: 1, limu: 1, lauhala: 1 },
+  },
+  {
+    id: 'return_fish',
+    label: 'Return a Fish to the Sea',
+    description: 'Give back what you caught. Take only what is needed.',
+    panelId: 'kahakai_moana',
+    kind: 'restraint',
+    cost: { fish: 1 },
+    spiritGain: { kanaloa: 4, shark_aumakua: 3 },
   },
 ];
 

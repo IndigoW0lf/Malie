@@ -28,6 +28,16 @@ function asGameState(data: unknown): GameState | null {
   if (!Array.isArray(g.messageLog)) return null;
   // actionsUsedToday was added alongside the daily-limit rule; tolerate older blobs.
   if (!Array.isArray(g.actionsUsedToday)) g.actionsUsedToday = [];
+  // spirits (Pilina) were added later, and the roster has grown since; backfill
+  // any presence missing from an older save so every id is always present.
+  {
+    const blank = { points: 0, discovered: false, attention: 0 };
+    const ids = ['lono', 'kanaloa', 'pueo_aumakua', 'kane', 'ku', 'moo_aumakua', 'shark_aumakua'];
+    const existing = (g.spirits ?? {}) as Record<string, Partial<typeof blank>>;
+    const merged: Record<string, typeof blank> = {};
+    for (const id of ids) merged[id] = { ...blank, ...existing[id] };
+    g.spirits = merged as GameState['spirits'];
+  }
   // Placement moved from numeric `slot` to named `slotId`; drop pre-migration
   // entries that lack a string slotId so they don't render as ghosts.
   g.placedItems = g.placedItems.filter(

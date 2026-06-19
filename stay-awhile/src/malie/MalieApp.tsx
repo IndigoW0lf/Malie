@@ -22,6 +22,7 @@ import { CraftingPanel } from './components/CraftingPanel';
 import { PlacedItemLayer } from './components/PlacedItemLayer';
 import { PlacementOverlay } from './components/PlacementOverlay';
 import { HaleCalibrator } from './components/HaleCalibrator';
+import { PilinaMap } from './components/PilinaMap';
 import {
   sceneVariantForState,
   sceneBackground,
@@ -38,6 +39,8 @@ export default function MalieApp() {
   const [placingId, setPlacingId] = useState<string | null>(null);
   /** DEV-only hale slot calibration overlay. */
   const [calOpen, setCalOpen] = useState(false);
+  /** Pilina relationship map overlay. */
+  const [pilinaOpen, setPilinaOpen] = useState(false);
 
   const inventoryCount = Object.values(state.inventory).reduce((n, c) => n + (c ?? 0), 0);
 
@@ -97,6 +100,7 @@ export default function MalieApp() {
         state={state}
         inventoryCount={inventoryCount}
         onToggleInventory={() => setBagOpen((v) => !v)}
+        onOpenPilina={() => setPilinaOpen(true)}
       />
 
       <main className="m-main">
@@ -133,6 +137,10 @@ export default function MalieApp() {
       />
 
       <InventoryDrawer open={bagOpen} inventory={state.inventory} onClose={() => setBagOpen(false)} />
+
+      {pilinaOpen && (
+        <PilinaMap state={state} dispatch={dispatch} onClose={() => setPilinaOpen(false)} />
+      )}
 
       {/* Placement mode — only in the hale, only while an item is selected. */}
       {isHale && placingItem && (

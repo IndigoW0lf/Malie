@@ -2,8 +2,10 @@
  * Mālie — the Gather tray. An expanding panel of the current place's actions as
  * compact text rows (no big icons). Each action is doable once per day.
  */
-import type { GameAction, GameState } from '../types/game';
+import type { GameAction, GameState, ResourceId } from '../types/game';
 import { ACTIONS_BY_PANEL, PANELS_BY_ID } from '../data/panels';
+import { resourceName } from '../data/resources';
+import { canAfford } from '../state/initialState';
 
 interface Props {
   state: GameState;
@@ -30,18 +32,29 @@ export function GatherSheet({ state, dispatch, onClose }: Props) {
         <ul className="m-gather-list">
           {actions.map((a) => {
             const used = state.actionsUsedToday.includes(a.id);
+            const restraint = a.kind === 'restraint';
+            const lacksCost = a.cost != null && !canAfford(state.inventory, a.cost);
+            const disabled = used || lacksCost;
+
+            let stateLabel: string;
+            if (used) stateLabel = 'done today';
+            else if (lacksCost) {
+              const need = (Object.keys(a.cost ?? {}) as ResourceId[])[0];
+              stateLabel = `need ${need ? resourceName(need).toLowerCase() : '…'}`;
+            } else stateLabel = restraint ? 'give' : 'gather';
+
             return (
               <li key={a.id}>
                 <button
-                  className={`m-gather-row${used ? ' m-gather-used' : ''}`}
-                  disabled={used}
+                  className={`m-gather-row${used ? ' m-gather-used' : ''}${restraint ? ' m-gather-give' : ''}`}
+                  disabled={disabled}
                   onClick={() => dispatch({ type: 'PERFORM_PANEL_ACTION', actionId: a.id })}
                 >
                   <span className="m-gather-text">
                     <span className="m-gather-label">{a.label}</span>
                     <span className="m-gather-desc">{a.description}</span>
                   </span>
-                  <span className="m-gather-state">{used ? 'done today' : 'gather'}</span>
+                  <span className="m-gather-state">{stateLabel}</span>
                 </button>
               </li>
             );

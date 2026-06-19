@@ -37,6 +37,15 @@ export function createInitialState(): GameState {
     craftedItems: [],
     placedItems: [],
     actionsUsedToday: [],
+    spirits: {
+      lono: { points: 0, discovered: false, attention: 0 },
+      kanaloa: { points: 0, discovered: false, attention: 0 },
+      pueo_aumakua: { points: 0, discovered: false, attention: 0 },
+      kane: { points: 0, discovered: false, attention: 0 },
+      ku: { points: 0, discovered: false, attention: 0 },
+      moo_aumakua: { points: 0, discovered: false, attention: 0 },
+      shark_aumakua: { points: 0, discovered: false, attention: 0 },
+    },
     messageLog: [greetingForDay(day)],
   };
 }

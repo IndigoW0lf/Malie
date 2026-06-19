@@ -816,6 +816,341 @@ body {
   width: 100%;
 }
 
+/* ─── Pilina map & spirit cards ────────────────────────────────────────────── */
+
+.m-status-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.m-pilina {
+  position: absolute;
+  inset: 0;
+  z-index: 38;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(
+    180deg,
+    #1b2a4a 0%,
+    #2d456a 18%,
+    #3f6f55 42%,
+    #4f7d45 55%,
+    #236c8f 78%,
+    #123f5a 100%
+  );
+  color: #f4ecd8;
+}
+.m-pilina-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 14px 18px;
+  padding-top: max(14px, env(safe-area-inset-top));
+  background: rgba(18, 14, 10, 0.25);
+}
+.m-pilina-head h2 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+.m-pilina-sub {
+  margin: 2px 0 0;
+  font-style: italic;
+  opacity: 0.8;
+  font-size: 0.86rem;
+}
+.m-pilina-head .m-icon-btn {
+  color: #f4ecd8;
+}
+
+.m-pilina-map {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+/* the kahawai — a soft stream down the middle, mauka to makai */
+.m-pilina-map::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 5%;
+  bottom: 5%;
+  width: 3px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: linear-gradient(
+    180deg,
+    rgba(244, 236, 216, 0.04),
+    rgba(127, 183, 201, 0.28) 40%,
+    rgba(18, 63, 90, 0.12)
+  );
+}
+.m-region {
+  position: absolute;
+  left: 16px;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-style: italic;
+  opacity: 0.4;
+}
+.m-region-top {
+  top: 5%;
+}
+.m-region-mid {
+  top: 50%;
+  transform: translateY(-50%);
+}
+.m-region-bot {
+  bottom: 5%;
+}
+
+/* presences as pins on alternating banks of the stream */
+.m-presence {
+  position: absolute;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 46%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #f4ecd8;
+  font: inherit;
+  cursor: pointer;
+}
+.m-presence-right {
+  left: 52%;
+  flex-direction: row;
+  text-align: left;
+}
+.m-presence-left {
+  right: 52%;
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.m-presence-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.m-presence:disabled {
+  cursor: default;
+}
+.m-presence-badge {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 2px solid rgba(244, 236, 216, 0.28);
+  background: rgba(20, 16, 12, 0.38);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+.m-presence-glyph {
+  font-size: 2rem;
+  filter: grayscale(1) opacity(0.45);
+}
+.m-presence-known .m-presence-badge {
+  background: rgba(244, 236, 216, 0.16);
+  border-color: rgba(244, 236, 216, 0.55);
+}
+.m-presence-known .m-presence-glyph {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+}
+.m-presence-known:hover .m-presence-badge {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+}
+.m-presence-name {
+  font-weight: 700;
+  font-size: 0.98rem;
+}
+.m-presence:disabled .m-presence-name {
+  font-weight: 600;
+  font-style: italic;
+  opacity: 0.6;
+}
+.m-presence-place {
+  font-size: 0.72rem;
+  opacity: 0.78;
+}
+/* deeper relationship → warmer glow on the badge */
+.m-presence-l2.m-presence-known .m-presence-badge {
+  box-shadow: 0 0 16px rgba(242, 209, 140, 0.25);
+}
+.m-presence-l3.m-presence-known .m-presence-badge {
+  box-shadow: 0 0 24px rgba(242, 209, 140, 0.4);
+}
+.m-presence-l4.m-presence-known .m-presence-badge {
+  box-shadow: 0 0 32px rgba(242, 209, 140, 0.55);
+  border-color: var(--sun);
+}
+.m-presence-near .m-presence-badge {
+  animation: m-near 2.4s ease-in-out infinite;
+}
+@keyframes m-near {
+  0%,
+  100% {
+    box-shadow: 0 0 16px rgba(127, 183, 201, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(127, 183, 201, 0.7);
+  }
+}
+.m-pilina-foot {
+  margin: 0;
+  padding: 12px 18px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  font-size: 0.8rem;
+  font-style: italic;
+  text-align: center;
+  opacity: 0.8;
+  background: rgba(18, 14, 10, 0.25);
+}
+
+/* spirit card */
+.m-card-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 39;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(18, 14, 10, 0.55);
+}
+.m-card {
+  width: min(460px, 100%);
+  max-height: 88%;
+  overflow-y: auto;
+  background: var(--panel);
+  color: var(--ink);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 18px 18px;
+}
+.m-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.m-card-glyph {
+  font-size: 2.2rem;
+}
+.m-card-title {
+  flex: 1;
+}
+.m-card-name {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.m-card-kind {
+  margin: 1px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-style: italic;
+}
+.m-card-level {
+  margin: 12px 0 4px;
+  font-size: 1rem;
+}
+.m-card-next {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+.m-card-effect {
+  margin: 0 0 10px;
+  font-style: italic;
+  color: var(--green);
+}
+.m-card-facts {
+  margin: 10px 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  font-size: 0.86rem;
+}
+.m-card-facts dt {
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 0.64rem;
+  letter-spacing: 0.06em;
+  padding-top: 2px;
+}
+.m-card-facts dd {
+  margin: 0;
+}
+.m-card-note {
+  margin: 12px 0 2px;
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+.m-card-source {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-style: italic;
+}
+.m-card-offer {
+  border-top: 1.5px solid rgba(154, 107, 53, 0.25);
+  padding-top: 10px;
+}
+.m-card-offer h4 {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.m-offer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.m-offer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  background: rgba(226, 182, 111, 0.25);
+  border-radius: var(--radius-sm);
+}
+.m-offer-aligned {
+  color: var(--green);
+  font-size: 0.78rem;
+}
+.m-offer-btn {
+  border: 1.5px solid var(--green);
+  background: var(--green);
+  color: #f4ecd8;
+  border-radius: 999px;
+  padding: 5px 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* restraint rows in the gather tray read as "giving", not taking */
+.m-gather-give {
+  border-style: dashed;
+  border-color: var(--deep-green);
+}
+.m-gather-give .m-gather-state {
+  color: var(--deep-green);
+}
+
 /* ─── scene navigation arrows ──────────────────────────────────────────────── */
 
 .m-scenenav {
